@@ -2,10 +2,21 @@
 
 import dynamic from "next/dynamic";
 
+export type MapTranslations = {
+  switchToDarkMapStyle: string;
+  switchToLightMapStyle: string;
+  darkModeTitle: string;
+  lightModeTitle: string;
+};
+
 const LeafletMap = dynamic(() => import("./leaflet-map"), {
   ssr: false,
 });
 
-export default function MapScreen() {
-  return <LeafletMap />;
+type MapScreenProps = {
+  translations: MapTranslations;
+};
+
+export default function MapScreen({ translations }: MapScreenProps) {
+  return <LeafletMap translations={translations} />;
 }

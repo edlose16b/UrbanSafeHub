@@ -10,6 +10,7 @@ import {
   MAP_TILE_STYLES,
   TILE_ATTRIBUTION,
 } from "../constants/map";
+import type { MapTranslations } from "./map-screen";
 
 function getSystemPrefersDarkMode(): boolean {
   if (typeof window === "undefined") {
@@ -19,13 +20,17 @@ function getSystemPrefersDarkMode(): boolean {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-export default function LeafletMap() {
+type LeafletMapProps = {
+  translations: MapTranslations;
+};
+
+export default function LeafletMap({ translations }: LeafletMapProps) {
   const [isDarkMode, setIsDarkMode] = useState(getSystemPrefersDarkMode);
   const tileUrl = isDarkMode ? MAP_TILE_STYLES.dark : MAP_TILE_STYLES.light;
   const toggleIcon = isDarkMode ? MAP_STYLE_ICON.dark : MAP_STYLE_ICON.light;
   const ariaLabel = isDarkMode
-    ? "Switch to light map style"
-    : "Switch to dark map style";
+    ? translations.switchToLightMapStyle
+    : translations.switchToDarkMapStyle;
 
   return (
     <div className="relative w-screen h-screen">
@@ -34,7 +39,7 @@ export default function LeafletMap() {
         onClick={() => setIsDarkMode((current) => !current)}
         className="absolute top-4 right-4 z-[1000] rounded-full border border-black/20 bg-white/95 p-2 text-black shadow-md transition-colors hover:bg-white"
         aria-label={ariaLabel}
-        title={isDarkMode ? "Light mode" : "Dark mode"}
+        title={isDarkMode ? translations.lightModeTitle : translations.darkModeTitle}
       >
         <Image src={toggleIcon} alt="" width={20} height={20} aria-hidden />
       </button>

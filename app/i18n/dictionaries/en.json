@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "title": "Sahakum",
+    "description": "Community map to share and rate places"
+  },
+  "map": {
+    "switchToDarkMapStyle": "Switch to dark map style",
+    "switchToLightMapStyle": "Switch to light map style",
+    "darkModeTitle": "Dark mode",
+    "lightModeTitle": "Light mode"
+  }
+}

@@ -2,8 +2,16 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from "react-leaflet";
+import {
+  CircleMarker,
+  MapContainer,
+  Polygon,
+  TileLayer,
+  Tooltip,
+  useMap,
+} from "react-leaflet";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
+import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import {
   INITIAL_ZOOM,
   LIMA_CENTER,
@@ -34,6 +42,7 @@ function getInitialLocationStatus(): LocationStatus {
 type LeafletMapProps = {
   lang: string;
   initialUser: AuthUserSnapshot;
+  initialZones: ZoneDTO[];
   authTranslations: AuthMenuTranslations;
   translations: MapTranslations;
 };
@@ -59,6 +68,7 @@ function RecenterOnUserPosition({
 export default function LeafletMap({
   lang,
   initialUser,
+  initialZones,
   authTranslations,
   translations,
 }: LeafletMapProps) {
@@ -188,6 +198,49 @@ export default function LeafletMap({
       >
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
+        {initialZones.map((zone) => {
+          if (zone.geometry.type === "Point") {
+            const [longitude, latitude] = zone.geometry.coordinates;
+
+            return (
+              <CircleMarker
+                key={zone.id}
+                center={[latitude, longitude]}
+                radius={8}
+                pathOptions={{
+                  color: "#0f172a",
+                  fillColor: "#f59e0b",
+                  fillOpacity: 0.9,
+                  weight: 1.5,
+                }}
+              >
+                <Tooltip direction="top" offset={[0, -8]}>
+                  {zone.name}
+                </Tooltip>
+              </CircleMarker>
+            );
+          }
+
+          const outerRing = zone.geometry.coordinates[0];
+          const positions: [number, number][] = outerRing.map(
+            ([longitude, latitude]) => [latitude, longitude],
+          );
+
+          return (
+            <Polygon
+              key={zone.id}
+              positions={positions}
+              pathOptions={{
+                color: "#0f172a",
+                fillColor: "#22c55e",
+                fillOpacity: 0.25,
+                weight: 1.5,
+              }}
+            >
+              <Tooltip sticky>{zone.name}</Tooltip>
+            </Polygon>
+          );
+        })}
         {userPosition ? (
           <>
             <CircleMarker

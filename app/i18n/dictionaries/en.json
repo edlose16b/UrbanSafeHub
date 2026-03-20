@@ -8,5 +8,13 @@
     "switchToLightMapStyle": "Switch to light map style",
     "darkModeTitle": "Dark mode",
     "lightModeTitle": "Light mode"
+  },
+  "auth": {
+    "anonymousLabel": "A",
+    "openMenu": "Open user menu",
+    "signInWithGoogle": "Sign in with Google",
+    "contributions": "Contributions",
+    "contributionsComingSoon": "This section will be available soon.",
+    "signOut": "Sign out"
   }
 }

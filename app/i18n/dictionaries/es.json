@@ -8,5 +8,13 @@
     "switchToLightMapStyle": "Cambiar a mapa claro",
     "darkModeTitle": "Modo oscuro",
     "lightModeTitle": "Modo claro"
+  },
+  "auth": {
+    "anonymousLabel": "A",
+    "openMenu": "Abrir menú de usuario",
+    "signInWithGoogle": "Iniciar con Google",
+    "contributions": "Contribuciones",
+    "contributionsComingSoon": "Esta sección estará disponible pronto.",
+    "signOut": "Cerrar sesión"
   }
 }

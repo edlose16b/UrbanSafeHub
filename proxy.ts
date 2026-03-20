@@ -14,6 +14,10 @@ function pathnameHasLocale(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname.startsWith("/auth/")) {
+    return NextResponse.next();
+  }
+
   if (pathnameHasLocale(pathname)) {
     return NextResponse.next();
   }
@@ -29,6 +33,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    "/((?!api|auth|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

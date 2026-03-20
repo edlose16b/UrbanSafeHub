@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
 import { CreateZoneUseCase } from "@/lib/zones/application/create-zone";
 import { ListVisibleZonesUseCase } from "@/lib/zones/application/list-visible-zones";
-import { clampRadiusKm } from "@/lib/zones/utils/clamp-radius-km";
-import { parseFiniteNumber } from "@/lib/zones/utils/parse-finite-number";
+import { clampRadiusKm, parseFiniteNumber } from "@/lib/zones/utils/number";
 import { toZoneDTO } from "@/lib/zones/application/zone-dto";
 import { ZoneValidationError } from "@/lib/zones/domain/validation";
 import { SupabaseZoneRepository } from "@/lib/zones/infrastructure/supabase-zone-repository";

@@ -6,6 +6,7 @@ import {
   type ZoneGeometry,
   type ZoneType,
 } from "./zone";
+import { isFiniteNumber } from "../utils/number";
 
 const MIN_ZONE_NAME_LENGTH = 2;
 const MAX_ZONE_NAME_LENGTH = 120;
@@ -15,10 +16,6 @@ export class ZoneValidationError extends Error {
     super(message);
     this.name = "ZoneValidationError";
   }
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
 }
 
 function isValidPosition(value: unknown): value is GeoJsonPosition {

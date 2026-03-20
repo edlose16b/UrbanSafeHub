@@ -11,6 +11,7 @@ import type {
   ZoneType,
 } from "../domain/zone";
 import { ZoneValidationError } from "../domain/validation";
+import { isFiniteNumber } from "../utils/number";
 
 type ZoneRow = {
   id: string;
@@ -20,10 +21,6 @@ type ZoneRow = {
   created_by: string;
   created_at: string;
 };
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
 
 function isPosition(value: unknown): value is GeoJsonPosition {
   if (!Array.isArray(value) || value.length !== 2) {
@@ -60,7 +57,10 @@ function parseGeometryObject(raw: unknown): ZoneGeometry {
   }
 
   if (candidate.type === "Polygon") {
-    if (!Array.isArray(candidate.coordinates) || candidate.coordinates.length < 1) {
+    if (
+      !Array.isArray(candidate.coordinates) ||
+      candidate.coordinates.length < 1
+    ) {
       throw new ZoneValidationError("Invalid Polygon geometry from database.");
     }
 
@@ -71,7 +71,9 @@ function parseGeometryObject(raw: unknown): ZoneGeometry {
 
       return ring.map((position) => {
         if (!isPosition(position)) {
-          throw new ZoneValidationError("Invalid Polygon coordinate from database.");
+          throw new ZoneValidationError(
+            "Invalid Polygon coordinate from database.",
+          );
         }
 
         return position;
@@ -120,7 +122,10 @@ function toEwktGeometry(geometry: ZoneGeometry): string {
   }
 
   const rings = geometry.coordinates
-    .map((ring) => `(${ring.map((position) => positionToWkt(position)).join(",")})`)
+    .map(
+      (ring) =>
+        `(${ring.map((position) => positionToWkt(position)).join(",")})`,
+    )
     .join(",");
 
   return `SRID=4326;POLYGON(${rings})`;

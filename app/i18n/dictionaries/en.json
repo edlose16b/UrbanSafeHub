@@ -7,7 +7,11 @@
     "switchToDarkMapStyle": "Switch to dark map style",
     "switchToLightMapStyle": "Switch to light map style",
     "darkModeTitle": "Dark mode",
-    "lightModeTitle": "Light mode"
+    "lightModeTitle": "Light mode",
+    "locateUserTitle": "Locate me",
+    "locationDeniedMessage": "Location access was denied. The map stays centered on Lima.",
+    "locationUnavailableMessage": "We could not get your current location. The map stays centered on Lima.",
+    "userLocationLabel": "Your location"
   },
   "auth": {
     "anonymousLabel": "A",

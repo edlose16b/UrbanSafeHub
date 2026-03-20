@@ -9,6 +9,10 @@ export type MapTranslations = {
   switchToLightMapStyle: string;
   darkModeTitle: string;
   lightModeTitle: string;
+  locateUserTitle: string;
+  locationDeniedMessage: string;
+  locationUnavailableMessage: string;
+  userLocationLabel: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

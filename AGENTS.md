@@ -6,7 +6,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
+## Project
+
+Read PROJECT.md to understand project goals.
+
 ## DB
 
 For Supabase MCP use
 `supabase_sahakum`
+
+## Rules
+
+- do not use svg directly, create on `public/icons` first

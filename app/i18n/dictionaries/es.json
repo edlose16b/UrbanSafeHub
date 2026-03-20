@@ -7,7 +7,11 @@
     "switchToDarkMapStyle": "Cambiar a mapa oscuro",
     "switchToLightMapStyle": "Cambiar a mapa claro",
     "darkModeTitle": "Modo oscuro",
-    "lightModeTitle": "Modo claro"
+    "lightModeTitle": "Modo claro",
+    "locateUserTitle": "Ubicarme",
+    "locationDeniedMessage": "No diste permiso de ubicación. Mostramos el mapa centrado en Lima.",
+    "locationUnavailableMessage": "No se pudo obtener tu ubicación actual. Mostramos el mapa centrado en Lima.",
+    "userLocationLabel": "Tu ubicación"
   },
   "auth": {
     "anonymousLabel": "A",

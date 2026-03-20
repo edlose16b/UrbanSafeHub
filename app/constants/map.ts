@@ -13,3 +13,5 @@ export const MAP_STYLE_ICON = {
   light: "/icons/moon.svg",
   dark: "/icons/sun.svg",
 } as const;
+
+export const LOCATE_USER_ICON = "/icons/locate.svg";

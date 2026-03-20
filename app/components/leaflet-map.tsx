@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CircleMarker,
   MapContainer,
@@ -9,9 +9,11 @@ import {
   TileLayer,
   Tooltip,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
+import { clampRadiusKm } from "@/lib/zones/utils/clamp-radius-km";
 import {
   INITIAL_ZOOM,
   LIMA_CENTER,
@@ -42,14 +44,19 @@ function getInitialLocationStatus(): LocationStatus {
 type LeafletMapProps = {
   lang: string;
   initialUser: AuthUserSnapshot;
-  initialZones: ZoneDTO[];
   authTranslations: AuthMenuTranslations;
   translations: MapTranslations;
 };
 
 type LocationStatus = "idle" | "success" | "denied" | "unavailable";
+type ViewportQuery = {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+};
 
 const USER_LOCATION_ZOOM = 16;
+const VIEWPORT_FETCH_DEBOUNCE_MS = 250;
 
 function RecenterOnUserPosition({
   position,
@@ -65,17 +72,96 @@ function RecenterOnUserPosition({
   return null;
 }
 
+function toViewportQuery(map: ReturnType<typeof useMap>): ViewportQuery {
+  const center = map.getCenter();
+  const bounds = map.getBounds();
+  const radiusKm = clampRadiusKm(center.distanceTo(bounds.getNorthEast()) / 1000);
+
+  return {
+    lat: center.lat,
+    lng: center.lng,
+    radiusKm,
+  };
+}
+
+function ViewportZoneFetcher({
+  onViewportChanged,
+}: {
+  onViewportChanged: (query: ViewportQuery) => void;
+}) {
+  const map = useMap();
+
+  useMapEvents({
+    moveend() {
+      onViewportChanged(toViewportQuery(map));
+    },
+    zoomend() {
+      onViewportChanged(toViewportQuery(map));
+    },
+  });
+
+  useEffect(() => {
+    onViewportChanged(toViewportQuery(map));
+  }, [map, onViewportChanged]);
+
+  return null;
+}
+
 export default function LeafletMap({
   lang,
   initialUser,
-  initialZones,
   authTranslations,
   translations,
 }: LeafletMapProps) {
   const [isDarkMode, setIsDarkMode] = useState(getSystemPrefersDarkMode);
+  const [zones, setZones] = useState<ZoneDTO[]>([]);
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [locationStatus, setLocationStatus] =
     useState<LocationStatus>(getInitialLocationStatus);
+  const activeRequestRef = useRef(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchZones = useCallback(async (query: ViewportQuery) => {
+    const requestId = activeRequestRef.current + 1;
+    activeRequestRef.current = requestId;
+    const params = new URLSearchParams({
+      lat: query.lat.toFixed(7),
+      lng: query.lng.toFixed(7),
+      radiusKm: query.radiusKm.toFixed(4),
+    });
+
+    const response = await fetch(`/api/zones?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = (await response.json()) as {
+      zones?: ZoneDTO[];
+    };
+
+    if (activeRequestRef.current !== requestId) {
+      return;
+    }
+
+    setZones(Array.isArray(payload.zones) ? payload.zones : []);
+  }, []);
+
+  const scheduleZoneFetch = useCallback(
+    (query: ViewportQuery) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      debounceRef.current = setTimeout(() => {
+        void fetchZones(query);
+      }, VIEWPORT_FETCH_DEBOUNCE_MS);
+    },
+    [fetchZones],
+  );
 
   const requestUserLocation = () => {
     if (!("geolocation" in navigator)) {
@@ -103,6 +189,14 @@ export default function LeafletMap({
       },
     );
   };
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (locationStatus !== "idle") {
@@ -196,9 +290,10 @@ export default function LeafletMap({
         scrollWheelZoom
         className="w-screen h-screen"
       >
+        <ViewportZoneFetcher onViewportChanged={scheduleZoneFetch} />
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
-        {initialZones.map((zone) => {
+        {zones.map((zone) => {
           if (zone.geometry.type === "Point") {
             const [longitude, latitude] = zone.geometry.coordinates;
 

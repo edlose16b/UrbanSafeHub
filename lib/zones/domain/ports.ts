@@ -7,8 +7,14 @@ export type CreateZoneRecord = {
   createdBy: string;
 };
 
+export type ListVisibleNearCenterQuery = {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+};
+
 export interface ZoneQueryRepository {
-  listVisible(): Promise<ZoneSnapshot[]>;
+  listVisibleNearCenter(query: ListVisibleNearCenterQuery): Promise<ZoneSnapshot[]>;
 }
 
 export interface ZoneCommandRepository {

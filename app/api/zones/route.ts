@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { CreateZoneUseCase } from "@/lib/zones/application/create-zone";
 import { ListVisibleZonesUseCase } from "@/lib/zones/application/list-visible-zones";
+import { clampRadiusKm } from "@/lib/zones/utils/clamp-radius-km";
+import { parseFiniteNumber } from "@/lib/zones/utils/parse-finite-number";
 import { toZoneDTO } from "@/lib/zones/application/zone-dto";
 import { ZoneValidationError } from "@/lib/zones/domain/validation";
 import { SupabaseZoneRepository } from "@/lib/zones/infrastructure/supabase-zone-repository";
@@ -22,12 +24,41 @@ function toErrorMessage(error: unknown): string {
   return "Unknown error.";
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
+  const { searchParams } = request.nextUrl;
+  const lat = parseFiniteNumber(searchParams.get("lat"));
+  const lng = parseFiniteNumber(searchParams.get("lng"));
+  const rawRadiusKm = parseFiniteNumber(searchParams.get("radiusKm"));
+
+  if (lat === null || lng === null || rawRadiusKm === null) {
+    return Response.json(
+      {
+        error: "Missing or invalid query params. Required: lat, lng, radiusKm.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return Response.json(
+      {
+        error: "Invalid coordinates range.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const radiusKm = clampRadiusKm(rawRadiusKm);
+
   try {
     const supabase = await getSupabaseServerClient();
     const repository = new SupabaseZoneRepository(supabase);
     const useCase = new ListVisibleZonesUseCase(repository);
-    const zones = await useCase.execute();
+    const zones = await useCase.execute({
+      lat,
+      lng,
+      radiusKm,
+    });
 
     return Response.json({
       zones: zones.map((zone) => toZoneDTO(zone)),

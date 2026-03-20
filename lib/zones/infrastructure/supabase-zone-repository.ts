@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ZoneCommandRepository, ZoneQueryRepository } from "../domain/ports";
+import type {
+  ListVisibleNearCenterQuery,
+  ZoneCommandRepository,
+  ZoneQueryRepository,
+} from "../domain/ports";
 import type {
   GeoJsonPosition,
   ZoneGeometry,
@@ -122,12 +126,81 @@ function toEwktGeometry(geometry: ZoneGeometry): string {
   return `SRID=4326;POLYGON(${rings})`;
 }
 
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function haversineDistanceKm(
+  first: GeoJsonPosition,
+  second: GeoJsonPosition,
+): number {
+  const [firstLng, firstLat] = first;
+  const [secondLng, secondLat] = second;
+  const earthRadiusKm = 6371;
+
+  const dLat = toRadians(secondLat - firstLat);
+  const dLng = toRadians(secondLng - firstLng);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(firstLat)) *
+      Math.cos(toRadians(secondLat)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusKm * c;
+}
+
+function isPointInsidePolygon(
+  point: GeoJsonPosition,
+  polygonRing: GeoJsonPosition[],
+): boolean {
+  let inside = false;
+  const [pointLng, pointLat] = point;
+
+  for (let i = 0, j = polygonRing.length - 1; i < polygonRing.length; j = i++) {
+    const [lngI, latI] = polygonRing[i];
+    const [lngJ, latJ] = polygonRing[j];
+    const intersects =
+      latI > pointLat !== latJ > pointLat &&
+      pointLng < ((lngJ - lngI) * (pointLat - latI)) / (latJ - latI) + lngI;
+
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+function isZoneWithinRadius(
+  zone: ZoneSnapshot,
+  center: GeoJsonPosition,
+  radiusKm: number,
+): boolean {
+  if (zone.geometry.type === "Point") {
+    return haversineDistanceKm(zone.geometry.coordinates, center) <= radiusKm;
+  }
+
+  const outerRing = zone.geometry.coordinates[0];
+
+  if (isPointInsidePolygon(center, outerRing)) {
+    return true;
+  }
+
+  return outerRing.some(
+    (vertex) => haversineDistanceKm(vertex, center) <= radiusKm,
+  );
+}
+
 export class SupabaseZoneRepository
   implements ZoneQueryRepository, ZoneCommandRepository
 {
   constructor(private readonly supabase: SupabaseClient) {}
 
-  async listVisible(): Promise<ZoneSnapshot[]> {
+  async listVisibleNearCenter(
+    query: ListVisibleNearCenterQuery,
+  ): Promise<ZoneSnapshot[]> {
     const { data, error } = await this.supabase
       .from("zones")
       .select("id, name, zone_type, geom, created_by, created_at")
@@ -139,7 +212,12 @@ export class SupabaseZoneRepository
       throw new Error(`Unable to list zones: ${error.message}`);
     }
 
-    return (data ?? []).map((row) => toSnapshot(row as ZoneRow));
+    const center: GeoJsonPosition = [query.lng, query.lat];
+    const zones = (data ?? []).map((row) => toSnapshot(row as ZoneRow));
+
+    return zones.filter((zone) =>
+      isZoneWithinRadius(zone, center, query.radiusKm),
+    );
   }
 
   async create(record: {

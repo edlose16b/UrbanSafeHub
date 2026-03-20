@@ -3,19 +3,23 @@ type SupabaseConfig = {
   publishableKey: string;
 };
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
+export function getSupabaseConfig(): SupabaseConfig {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabasePublishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
-  if (!value) {
-    throw new Error(`Missing env var: ${name}`);
+  if (!supabaseUrl) {
+    throw new Error("Missing env var: NEXT_PUBLIC_SUPABASE_URL");
   }
 
-  return value;
-}
+  if (!supabasePublishableKey) {
+    throw new Error(
+      "Missing env var: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY",
+    );
+  }
 
-export function getSupabaseConfig(): SupabaseConfig {
   return {
-    url: getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    publishableKey: getRequiredEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY"),
+    url: supabaseUrl,
+    publishableKey: supabasePublishableKey,
   };
 }

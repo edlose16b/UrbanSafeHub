@@ -2,6 +2,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthIdentity } from "../domain/auth-user";
 import type { AuthProviderGateway } from "../domain/ports";
 
+function isMissingSessionError(errorMessage: string): boolean {
+  const normalized = errorMessage.toLowerCase();
+  return (
+    normalized.includes("auth session missing") ||
+    normalized.includes("session missing")
+  );
+}
+
 function readMetadataString(
   metadata: Record<string, unknown>,
   keys: string[],
@@ -43,21 +51,37 @@ export class SupabaseAuthProviderGateway implements AuthProviderGateway {
   constructor(private readonly supabase: SupabaseClient) {}
 
   async getCurrentAuthIdentity(): Promise<AuthIdentity | null> {
-    const { data, error } = await this.supabase.auth.getUser();
+    try {
+      const { data, error } = await this.supabase.auth.getUser();
+      console.log("data ", data);
+      console.log("error ", error);
+      if (error) {
+        if (isMissingSessionError(error.message)) {
+          return null;
+        }
 
-    if (error) {
-      throw new Error(`Unable to read authenticated user: ${error.message}`);
+        throw new Error(`Unable to read authenticated user: ${error.message}`);
+      }
+
+      if (!data.user) {
+        return null;
+      }
+
+      return mapMetadataToIdentity(
+        data.user.id,
+        data.user.email ?? null,
+        data.user.user_metadata ?? {},
+      );
+    } catch (unknownError) {
+      if (
+        unknownError instanceof Error &&
+        isMissingSessionError(unknownError.message)
+      ) {
+        return null;
+      }
+
+      throw unknownError;
     }
-
-    if (!data.user) {
-      return null;
-    }
-
-    return mapMetadataToIdentity(
-      data.user.id,
-      data.user.email ?? null,
-      data.user.user_metadata ?? {},
-    );
   }
 
   async signInWithGoogle(redirectTo: string): Promise<void> {

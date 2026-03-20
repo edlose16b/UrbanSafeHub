@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProfileRole {
+  user
+  moderator
+  admin
+
+  @@map("profile_role")
+}
+
+enum TimeSegment {
+  morning
+  afternoon
+  night
+  early_morning
+
+  @@map("time_segment")
+}
+
+enum ZoneType {
+  intersection
+  bus_stop
+
+  @@map("zone_type")
+}
+
+enum ZoneVisibility {
+  active
+  hidden
+
+  @@map("zone_visibility")
+}
+
+enum CommentVisibility {
+  visible
+  hidden
+
+  @@map("comment_visibility")
+}
+
+enum ReportTargetType {
+  zone
+  comment
+
+  @@map("report_target_type")
+}
+
+enum ReportStatus {
+  open
+  resolved
+  dismissed
+
+  @@map("report_status")
+}
+
+model Profile {
+  id               String             @id @db.Uuid
+  displayName      String?            @map("display_name")
+  avatarUrl        String?            @map("avatar_url")
+  role             ProfileRole        @default(user)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @default(now()) @map("updated_at") @db.Timestamptz(6)
+  zonesCreated     Zone[]             @relation("zone_created_by")
+  zonesDeleted     Zone[]             @relation("zone_deleted_by")
+  ratings          ZoneRating[]
+  commentsAuthored ZoneComment[]      @relation("zone_comment_author")
+  commentsDeleted  ZoneComment[]      @relation("zone_comment_deleted_by")
+  reportsFiled     ModerationReport[] @relation("reporter_user")
+  reportsResolved  ModerationReport[] @relation("resolved_by_user")
+
+  @@map("profiles")
+}
+
+model Zone {
+  id         String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  zoneType   ZoneType                               @map("zone_type")
+  geom       Unsupported("geometry(Geometry,4326)")
+  createdBy  String                                 @map("created_by") @db.Uuid
+  visibility ZoneVisibility                         @default(active)
+  createdAt  DateTime                               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime                               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime?                              @map("deleted_at") @db.Timestamptz(6)
+  deletedBy  String?                                @map("deleted_by") @db.Uuid
+
+  creator          Profile               @relation("zone_created_by", fields: [createdBy], references: [id], onDelete: Restrict)
+  deleter          Profile?              @relation("zone_deleted_by", fields: [deletedBy], references: [id], onDelete: SetNull)
+  ratings          ZoneRating[]
+  ratingAggregates ZoneRatingAggregate[]
+  comments         ZoneComment[]
+
+  @@index([visibility, deletedAt])
+  @@map("zones")
+}
+
+model ZoneRating {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zoneId         String      @map("zone_id") @db.Uuid
+  userId         String      @map("user_id") @db.Uuid
+  timeSegment    TimeSegment @map("time_segment")
+  crimeLevel     Int         @map("crime_level")
+  lighting       Int
+  footTraffic    Int         @map("foot_traffic")
+  overallSafety  Int         @map("overall_safety")
+  openBusinesses Boolean     @map("open_businesses")
+  isCurrent      Boolean     @default(true) @map("is_current")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  zone Zone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  user Profile @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([zoneId, timeSegment, isCurrent])
+  @@map("zone_ratings")
+}
+
+model ZoneRatingAggregate {
+  zoneId              String      @map("zone_id") @db.Uuid
+  timeSegment         TimeSegment @map("time_segment")
+  ratingsCount        Int         @default(0) @map("ratings_count")
+  avgCrimeLevel       Decimal?    @map("avg_crime_level") @db.Decimal(4, 2)
+  avgLighting         Decimal?    @map("avg_lighting") @db.Decimal(4, 2)
+  avgFootTraffic      Decimal?    @map("avg_foot_traffic") @db.Decimal(4, 2)
+  avgOverallSafety    Decimal?    @map("avg_overall_safety") @db.Decimal(4, 2)
+  openBusinessesRatio Decimal?    @map("open_businesses_ratio") @db.Decimal(5, 4)
+  updatedAt           DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@id([zoneId, timeSegment])
+  @@map("zone_rating_aggregates")
+}
+
+model ZoneComment {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zoneId      String            @map("zone_id") @db.Uuid
+  userId      String            @map("user_id") @db.Uuid
+  body        String
+  visibility  CommentVisibility @default(visible)
+  reportCount Int               @default(0) @map("report_count")
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  deletedBy   String?           @map("deleted_by") @db.Uuid
+
+  zone    Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  author  Profile  @relation("zone_comment_author", fields: [userId], references: [id], onDelete: Restrict)
+  deleter Profile? @relation("zone_comment_deleted_by", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@index([zoneId, visibility, deletedAt, createdAt(sort: Desc)])
+  @@map("zone_comments")
+}
+
+model ModerationReport {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  targetType          ReportTargetType @map("target_type")
+  targetId            String           @map("target_id") @db.Uuid
+  reason              String
+  details             String?
+  reporterUserId      String?          @map("reporter_user_id") @db.Uuid
+  reporterFingerprint String?          @map("reporter_fingerprint")
+  status              ReportStatus     @default(open)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  resolvedAt          DateTime?        @map("resolved_at") @db.Timestamptz(6)
+  resolvedBy          String?          @map("resolved_by") @db.Uuid
+
+  reporter Profile? @relation("reporter_user", fields: [reporterUserId], references: [id], onDelete: SetNull)
+  resolver Profile? @relation("resolved_by_user", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId, status, createdAt(sort: Desc)])
+  @@map("moderation_reports")
+}

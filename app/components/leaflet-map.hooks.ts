@@ -32,7 +32,9 @@ const DEFAULT_GEOLOCATION_OPTIONS: GeolocationOptions = {
 const POINT_RADIUS_OPTIONS_M = [100, 150, 200, 250, 300] as const;
 const DEFAULT_POINT_RADIUS_M = 150;
 
-function resolveLocationStatus(error: GeolocationPositionError): LocationStatus {
+function resolveLocationStatus(
+  error: GeolocationPositionError,
+): LocationStatus {
   if (error.code === error.PERMISSION_DENIED) {
     return "denied";
   }
@@ -127,7 +129,10 @@ export function useZonesByViewport() {
   }, [cancelScheduledZoneFetch]);
 
   const prependZone = useCallback((zone: ZoneDTO) => {
-    setZones((current) => [zone, ...current.filter((item) => item.id !== zone.id)]);
+    setZones((current) => [
+      zone,
+      ...current.filter((item) => item.id !== zone.id),
+    ]);
   }, []);
 
   return {
@@ -150,9 +155,12 @@ function requestCurrentPosition(
 }
 
 export function useUserLocation() {
-  const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
-  const [locationStatus, setLocationStatus] =
-    useState<LocationStatus>(getInitialLocationStatus);
+  const [userPosition, setUserPosition] = useState<[number, number] | null>(
+    null,
+  );
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>(
+    getInitialLocationStatus,
+  );
 
   const requestUserLocation = useCallback(() => {
     if (!("geolocation" in navigator)) {
@@ -298,7 +306,7 @@ export function useZoneCreation({
   const notifyOverlapError = useCallback(() => {
     setSubmitError(translations.zoneCreateOverlapError);
     setSubmitSuccess(null);
-  }, [translations.zoneCreateOverlapError]);
+  }, []);
 
   const submit = useCallback(async (): Promise<boolean> => {
     if (!canCreate || isSubmitting) {
@@ -338,10 +346,9 @@ export function useZoneCreation({
         return false;
       }
 
-      const ring = [...polygonVertices, polygonVertices[0]].map(([lat, lng]) => [
-        lng,
-        lat,
-      ]);
+      const ring = [...polygonVertices, polygonVertices[0]].map(
+        ([lat, lng]) => [lng, lat],
+      );
 
       geometry = {
         type: "Polygon",
@@ -357,7 +364,6 @@ export function useZoneCreation({
     } catch {
       hasClientConflict = false;
     }
-
     if (hasClientConflict) {
       notifyOverlapError();
       return false;

@@ -5,6 +5,7 @@ export type ZoneDTO = {
   name: string;
   zoneType: ZoneSnapshot["zoneType"];
   geometry: ZoneSnapshot["geometry"];
+  crimeLevel: number | null;
   createdBy: string;
   createdAt: string;
 };
@@ -15,6 +16,7 @@ export function toZoneDTO(snapshot: ZoneSnapshot): ZoneDTO {
     name: snapshot.name,
     zoneType: snapshot.zoneType,
     geometry: snapshot.geometry,
+    crimeLevel: snapshot.crimeLevel,
     createdBy: snapshot.createdBy,
     createdAt: snapshot.createdAt,
   };

@@ -10,6 +10,8 @@ import { isFiniteNumber } from "../utils/number";
 
 const MIN_ZONE_NAME_LENGTH = 2;
 const MAX_ZONE_NAME_LENGTH = 120;
+const MIN_POINT_RADIUS_M = 10;
+const MAX_POINT_RADIUS_M = 2000;
 
 export class ZoneValidationError extends Error {
   constructor(message: string) {
@@ -47,6 +49,20 @@ function parsePointCoordinates(raw: unknown): GeoJsonPosition {
   }
 
   return raw;
+}
+
+function parsePointRadiusM(raw: unknown): number {
+  if (!isFiniteNumber(raw)) {
+    throw new ZoneValidationError("Point radiusM must be a number.");
+  }
+
+  if (raw < MIN_POINT_RADIUS_M || raw > MAX_POINT_RADIUS_M) {
+    throw new ZoneValidationError(
+      `Point radiusM must be between ${MIN_POINT_RADIUS_M} and ${MAX_POINT_RADIUS_M}.`,
+    );
+  }
+
+  return Math.round(raw);
 }
 
 function parsePolygonCoordinates(raw: unknown): GeoJsonPosition[][] {
@@ -130,13 +146,16 @@ export function parseZoneGeometry(value: unknown): ZoneGeometry {
   const candidate = value as {
     type?: unknown;
     coordinates?: unknown;
+    radiusM?: unknown;
   };
 
   if (candidate.type === "Point") {
     const coordinates = parsePointCoordinates(candidate.coordinates);
+    const radiusM = parsePointRadiusM(candidate.radiusM);
     const point: GeoJsonPoint = {
       type: "Point",
       coordinates,
+      radiusM,
     };
     return point;
   }

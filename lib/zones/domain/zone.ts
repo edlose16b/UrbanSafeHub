@@ -7,6 +7,7 @@ export type GeoJsonPosition = [number, number];
 export type GeoJsonPoint = {
   type: "Point";
   coordinates: GeoJsonPosition;
+  radiusM: number;
 };
 
 export type GeoJsonPolygon = {
@@ -21,6 +22,7 @@ export type ZoneSnapshot = {
   name: string;
   zoneType: ZoneType;
   geometry: ZoneGeometry;
+  crimeLevel: number | null;
   createdBy: string;
   createdAt: string;
 };

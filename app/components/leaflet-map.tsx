@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Circle,
   CircleMarker,
   MapContainer,
   Polygon,
@@ -13,7 +14,7 @@ import {
 } from "react-leaflet";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
-import { clampRadiusKm } from "@/lib/zones/utils/clamp-radius-km";
+import { clampRadiusKm } from "@/lib/zones/utils/number";
 import {
   INITIAL_ZOOM,
   LIMA_CENTER,
@@ -57,6 +58,25 @@ type ViewportQuery = {
 
 const USER_LOCATION_ZOOM = 16;
 const VIEWPORT_FETCH_DEBOUNCE_MS = 250;
+const NO_CRIME_DATA_COLOR = "#94a3b8";
+
+function toHex(value: number): string {
+  return value.toString(16).padStart(2, "0");
+}
+
+function getCrimeHeatColor(crimeLevel: number | null): string {
+  if (crimeLevel === null) {
+    return NO_CRIME_DATA_COLOR;
+  }
+
+  const normalized = Math.max(1, Math.min(5, crimeLevel));
+  const ratio = (normalized - 1) / 4;
+  const red = Math.round(239 * ratio + 34 * (1 - ratio));
+  const green = Math.round(68 * ratio + 197 * (1 - ratio));
+  const blue = Math.round(68 * ratio + 94 * (1 - ratio));
+
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
 
 function RecenterOnUserPosition({
   position,
@@ -294,25 +314,31 @@ export default function LeafletMap({
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
         {zones.map((zone) => {
+          const heatColor = getCrimeHeatColor(zone.crimeLevel);
+
           if (zone.geometry.type === "Point") {
             const [longitude, latitude] = zone.geometry.coordinates;
+            const crimeTooltip =
+              zone.crimeLevel === null
+                ? `${zone.name} • Sin datos de delincuencia`
+                : `${zone.name} • Delincuencia ${zone.crimeLevel.toFixed(2)}/5`;
 
             return (
-              <CircleMarker
+              <Circle
                 key={zone.id}
                 center={[latitude, longitude]}
-                radius={8}
+                radius={zone.geometry.radiusM}
                 pathOptions={{
                   color: "#0f172a",
-                  fillColor: "#f59e0b",
-                  fillOpacity: 0.9,
+                  fillColor: heatColor,
+                  fillOpacity: 0.28,
                   weight: 1.5,
                 }}
               >
                 <Tooltip direction="top" offset={[0, -8]}>
-                  {zone.name}
+                  {crimeTooltip}
                 </Tooltip>
-              </CircleMarker>
+              </Circle>
             );
           }
 
@@ -327,12 +353,16 @@ export default function LeafletMap({
               positions={positions}
               pathOptions={{
                 color: "#0f172a",
-                fillColor: "#22c55e",
-                fillOpacity: 0.25,
+                fillColor: heatColor,
+                fillOpacity: 0.35,
                 weight: 1.5,
               }}
             >
-              <Tooltip sticky>{zone.name}</Tooltip>
+              <Tooltip sticky>
+                {zone.crimeLevel === null
+                  ? `${zone.name} • Sin datos de delincuencia`
+                  : `${zone.name} • Delincuencia ${zone.crimeLevel.toFixed(2)}/5`}
+              </Tooltip>
             </Polygon>
           );
         })}

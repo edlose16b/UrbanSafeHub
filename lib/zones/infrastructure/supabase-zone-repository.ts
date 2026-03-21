@@ -18,8 +18,15 @@ type ZoneRow = {
   name: string;
   zone_type: ZoneType;
   geom: unknown;
+  radius_m: number | null;
   created_by: string;
   created_at: string;
+};
+
+type ZoneCrimeAggregateRow = {
+  zone_id: string;
+  ratings_count: number;
+  avg_crime_level: number | null;
 };
 
 function isPosition(value: unknown): value is GeoJsonPosition {
@@ -38,7 +45,7 @@ function isPosition(value: unknown): value is GeoJsonPosition {
   );
 }
 
-function parseGeometryObject(raw: unknown): ZoneGeometry {
+function parseGeometryObject(raw: unknown, radiusM: number | null): ZoneGeometry {
   if (!raw || typeof raw !== "object") {
     throw new ZoneValidationError("Invalid geometry payload from database.");
   }
@@ -50,9 +57,14 @@ function parseGeometryObject(raw: unknown): ZoneGeometry {
       throw new ZoneValidationError("Invalid Point geometry from database.");
     }
 
+    if (!isFiniteNumber(radiusM)) {
+      throw new ZoneValidationError("Point geometry requires radius_m.");
+    }
+
     return {
       type: "Point",
       coordinates: candidate.coordinates,
+      radiusM: Math.round(radiusM),
     };
   }
 
@@ -89,24 +101,25 @@ function parseGeometryObject(raw: unknown): ZoneGeometry {
   throw new ZoneValidationError("Unsupported geometry type from database.");
 }
 
-function parseGeometry(raw: unknown): ZoneGeometry {
+function parseGeometry(raw: unknown, radiusM: number | null): ZoneGeometry {
   if (typeof raw === "string") {
     try {
-      return parseGeometryObject(JSON.parse(raw));
+      return parseGeometryObject(JSON.parse(raw), radiusM);
     } catch {
       throw new ZoneValidationError("Unable to parse geometry from database.");
     }
   }
 
-  return parseGeometryObject(raw);
+  return parseGeometryObject(raw, radiusM);
 }
 
-function toSnapshot(row: ZoneRow): ZoneSnapshot {
+function toSnapshot(row: ZoneRow, crimeLevel: number | null): ZoneSnapshot {
   return {
     id: row.id,
     name: row.name,
     zoneType: row.zone_type,
-    geometry: parseGeometry(row.geom),
+    geometry: parseGeometry(row.geom, row.radius_m),
+    crimeLevel,
     createdBy: row.created_by,
     createdAt: row.created_at,
   };
@@ -184,7 +197,8 @@ function isZoneWithinRadius(
   radiusKm: number,
 ): boolean {
   if (zone.geometry.type === "Point") {
-    return haversineDistanceKm(zone.geometry.coordinates, center) <= radiusKm;
+    const zoneRadiusKm = zone.geometry.radiusM / 1000;
+    return haversineDistanceKm(zone.geometry.coordinates, center) <= radiusKm + zoneRadiusKm;
   }
 
   const outerRing = zone.geometry.coordinates[0];
@@ -208,7 +222,7 @@ export class SupabaseZoneRepository
   ): Promise<ZoneSnapshot[]> {
     const { data, error } = await this.supabase
       .from("zones")
-      .select("id, name, zone_type, geom, created_by, created_at")
+      .select("id, name, zone_type, geom, radius_m, created_by, created_at")
       .eq("visibility", "active")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -218,7 +232,56 @@ export class SupabaseZoneRepository
     }
 
     const center: GeoJsonPosition = [query.lng, query.lat];
-    const zones = (data ?? []).map((row) => toSnapshot(row as ZoneRow));
+    const zoneRows = (data ?? []) as ZoneRow[];
+    const zoneIds = zoneRows.map((row) => row.id);
+
+    const zoneCrimeById = new Map<string, number | null>();
+
+    if (zoneIds.length > 0) {
+      const { data: aggregateData, error: aggregateError } = await this.supabase
+        .from("zone_rating_aggregates")
+        .select("zone_id, ratings_count, avg_crime_level")
+        .in("zone_id", zoneIds);
+
+      if (aggregateError) {
+        throw new Error(`Unable to load zone crime aggregates: ${aggregateError.message}`);
+      }
+
+      const weightedSumByZone = new Map<string, number>();
+      const weightByZone = new Map<string, number>();
+
+      for (const aggregate of (aggregateData ?? []) as ZoneCrimeAggregateRow[]) {
+        if (
+          !isFiniteNumber(aggregate.avg_crime_level) ||
+          !isFiniteNumber(aggregate.ratings_count) ||
+          aggregate.ratings_count <= 0
+        ) {
+          continue;
+        }
+
+        const previousWeightedSum = weightedSumByZone.get(aggregate.zone_id) ?? 0;
+        const previousWeight = weightByZone.get(aggregate.zone_id) ?? 0;
+        weightedSumByZone.set(
+          aggregate.zone_id,
+          previousWeightedSum + aggregate.avg_crime_level * aggregate.ratings_count,
+        );
+        weightByZone.set(aggregate.zone_id, previousWeight + aggregate.ratings_count);
+      }
+
+      for (const zoneId of zoneIds) {
+        const weightedSum = weightedSumByZone.get(zoneId);
+        const weight = weightByZone.get(zoneId);
+
+        if (!isFiniteNumber(weightedSum) || !isFiniteNumber(weight) || weight <= 0) {
+          zoneCrimeById.set(zoneId, null);
+          continue;
+        }
+
+        zoneCrimeById.set(zoneId, Math.max(1, Math.min(5, weightedSum / weight)));
+      }
+    }
+
+    const zones = zoneRows.map((row) => toSnapshot(row, zoneCrimeById.get(row.id) ?? null));
 
     return zones.filter((zone) =>
       isZoneWithinRadius(zone, center, query.radiusKm),
@@ -237,15 +300,16 @@ export class SupabaseZoneRepository
         name: record.name,
         zone_type: record.zoneType,
         geom: toEwktGeometry(record.geometry),
+        radius_m: record.geometry.type === "Point" ? record.geometry.radiusM : null,
         created_by: record.createdBy,
       })
-      .select("id, name, zone_type, geom, created_by, created_at")
+      .select("id, name, zone_type, geom, radius_m, created_by, created_at")
       .single();
 
     if (error) {
       throw new Error(`Unable to create zone: ${error.message}`);
     }
 
-    return toSnapshot(data as ZoneRow);
+    return toSnapshot(data as ZoneRow, null);
   }
 }

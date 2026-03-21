@@ -3,7 +3,10 @@ import { CreateZoneUseCase } from "@/lib/zones/application/create-zone";
 import { ListVisibleZonesUseCase } from "@/lib/zones/application/list-visible-zones";
 import { clampRadiusKm, parseFiniteNumber } from "@/lib/zones/utils/number";
 import { toZoneDTO } from "@/lib/zones/application/zone-dto";
-import { ZoneValidationError } from "@/lib/zones/domain/validation";
+import {
+  ZoneGeometryConflictError,
+  ZoneValidationError,
+} from "@/lib/zones/domain/validation";
 import { SupabaseZoneRepository } from "@/lib/zones/infrastructure/supabase-zone-repository";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -142,6 +145,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof ZoneGeometryConflictError) {
+      return Response.json(
+        {
+          errorCode: "ZONE_GEOMETRY_CONFLICT",
+          error: error.message,
+        },
+        { status: 409 },
+      );
+    }
+
     if (error instanceof ZoneValidationError) {
       return Response.json(
         {

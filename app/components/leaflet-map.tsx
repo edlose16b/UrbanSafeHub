@@ -28,6 +28,8 @@ import {
 } from "./leaflet-map.hooks";
 import type { LeafletMapProps } from "./leaflet-map.types";
 
+const POINT_RADIUS_OPTIONS_M = [100, 150, 200, 250, 300] as const;
+
 function LocationNotice({
   locationNotice,
 }: {
@@ -185,23 +187,29 @@ function ZoneCreationPanel({
 
       {isPointMode ? (
         <>
-          <label className="mt-3 block">
-            <span className="mb-1 block text-xs font-medium">
-              {translations.zoneCreateRadiusLabel}
-            </span>
-            <input
-              type="number"
-              min={10}
-              max={2000}
-              step={10}
-              value={pointRadiusM}
-              onChange={(event) => onRadiusChange(Number(event.target.value))}
-              className="w-full rounded-lg border border-border-muted bg-input px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-border"
-            />
+          <div className="mt-3">
+            <p className="mb-1 text-xs font-medium">{translations.zoneCreateRadiusLabel}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {POINT_RADIUS_OPTIONS_M.map((radiusOption) => (
+                <button
+                  key={radiusOption}
+                  type="button"
+                  onClick={() => onRadiusChange(radiusOption)}
+                  className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                    pointRadiusM === radiusOption
+                      ? "border-blue-700 bg-blue-50 text-blue-900"
+                      : "border-border-muted bg-surface-muted text-text-muted"
+                  }`}
+                  aria-pressed={pointRadiusM === radiusOption}
+                >
+                  {radiusOption}m
+                </button>
+              ))}
+            </div>
             <span className="mt-1 block text-xs text-text-secondary">
               {translations.zoneCreateRadiusHint}
             </span>
-          </label>
+          </div>
           <p className="mt-3 text-xs text-text-muted">
             {pointCenterReady
               ? translations.zoneCreatePointReady
@@ -236,7 +244,10 @@ function ZoneCreationPanel({
       )}
 
       {submitError ? (
-        <p className="mt-3 rounded-lg bg-danger px-3 py-2 text-xs text-danger-foreground">
+        <p
+          role="alert"
+          className="mt-3 rounded-lg bg-danger px-3 py-2 text-xs text-danger-foreground"
+        >
           {submitError}
         </p>
       ) : null}
@@ -293,6 +304,7 @@ export default function LeafletMap({
     submit,
   } = useZoneCreation({
     canCreate: effectiveCanCreateZone,
+    existingZones: zones,
     translations,
     onZoneCreated: prependZone,
   });

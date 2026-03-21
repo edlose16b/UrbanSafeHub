@@ -38,6 +38,7 @@ export type MapTranslations = {
   zoneCreateNameRequired: string;
   zoneCreatePointRequired: string;
   zoneCreatePolygonRequired: string;
+  zoneCreateOverlapError: string;
   zoneCreateFailedFallback: string;
   zoneCreateTermsAlert: string;
   zoneCreateTermsCheckbox: string;

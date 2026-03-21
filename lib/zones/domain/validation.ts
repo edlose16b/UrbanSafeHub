@@ -18,6 +18,13 @@ export class ZoneValidationError extends Error {
   }
 }
 
+export class ZoneGeometryConflictError extends ZoneValidationError {
+  constructor(message: string) {
+    super(message);
+    this.name = "ZoneGeometryConflictError";
+  }
+}
+
 function isValidPosition(value: unknown): value is GeoJsonPosition {
   if (!Array.isArray(value) || value.length !== 2) {
     return false;

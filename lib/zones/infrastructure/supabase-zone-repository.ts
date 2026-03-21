@@ -9,8 +9,12 @@ import type {
   ZoneGeometry,
   ZoneSnapshot,
 } from "../domain/zone";
-import { ZoneValidationError } from "../domain/validation";
+import {
+  ZoneGeometryConflictError,
+  ZoneValidationError,
+} from "../domain/validation";
 import { isFiniteNumber } from "../utils/number";
+import { zoneGeometriesTouchOrIntersect } from "../domain/geometry-overlap";
 
 type ZoneRow = {
   id: string;
@@ -214,6 +218,25 @@ export class SupabaseZoneRepository
 {
   constructor(private readonly supabase: SupabaseClient) {}
 
+  private async assertNoGeometryConflict(geometry: ZoneGeometry): Promise<void> {
+    const { data, error } = await this.supabase
+      .from("zones")
+      .select("geom, radius_m")
+      .eq("visibility", "active")
+      .is("deleted_at", null);
+
+    if (error) {
+      throw new Error(`Unable to check existing zones: ${error.message}`);
+    }
+
+    for (const row of (data ?? []) as Pick<ZoneRow, "geom" | "radius_m">[]) {
+      const existingGeometry = parseGeometry(row.geom, row.radius_m);
+      if (zoneGeometriesTouchOrIntersect(existingGeometry, geometry)) {
+        throw new ZoneGeometryConflictError("Zone geometry intersects an existing zone.");
+      }
+    }
+  }
+
   async listVisibleNearCenter(
     query: ListVisibleNearCenterQuery,
   ): Promise<ZoneSnapshot[]> {
@@ -291,6 +314,8 @@ export class SupabaseZoneRepository
     geometry: ZoneGeometry;
     createdBy: string;
   }): Promise<ZoneSnapshot> {
+    await this.assertNoGeometryConflict(record.geometry);
+
     const { data, error } = await this.supabase
       .from("zones")
       .insert({

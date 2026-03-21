@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
+import { zoneGeometriesTouchOrIntersect } from "@/lib/zones/domain/geometry-overlap";
+import type { ZoneGeometry } from "@/lib/zones/domain/zone";
 import type { MapTranslations } from "./map-screen";
 import type {
   DrawMode,
@@ -26,6 +28,9 @@ const DEFAULT_GEOLOCATION_OPTIONS: GeolocationOptions = {
   timeout: 10_000,
   maximumAge: 60_000,
 };
+
+const POINT_RADIUS_OPTIONS_M = [100, 150, 200, 250, 300] as const;
+const DEFAULT_POINT_RADIUS_M = 150;
 
 function resolveLocationStatus(error: GeolocationPositionError): LocationStatus {
   if (error.code === error.PERMISSION_DENIED) {
@@ -205,26 +210,31 @@ export function useUserLocation() {
 
 type ZoneCreationHookOptions = {
   canCreate: boolean;
+  existingZones: ZoneDTO[];
   translations: MapTranslations;
   onZoneCreated: (zone: ZoneDTO) => void;
 };
 
 function clampPointRadiusM(value: number): number {
   if (!Number.isFinite(value)) {
-    return 10;
+    return DEFAULT_POINT_RADIUS_M;
   }
 
-  return Math.max(10, Math.min(2000, Math.round(value)));
+  return POINT_RADIUS_OPTIONS_M.reduce((closest, candidate) => {
+    const isCloser = Math.abs(candidate - value) < Math.abs(closest - value);
+    return isCloser ? candidate : closest;
+  }, POINT_RADIUS_OPTIONS_M[0]);
 }
 
 export function useZoneCreation({
   canCreate,
+  existingZones,
   translations,
   onZoneCreated,
 }: ZoneCreationHookOptions) {
   const [drawMode, setDrawMode] = useState<DrawMode>("Point");
   const [zoneName, setZoneName] = useState("");
-  const [pointRadiusM, setPointRadiusM] = useState(150);
+  const [pointRadiusM, setPointRadiusM] = useState(DEFAULT_POINT_RADIUS_M);
   const [pointCenter, setPointCenter] = useState<LatLngPosition | null>(null);
   const [polygonVertices, setPolygonVertices] = useState<LatLngPosition[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -239,7 +249,7 @@ export function useZoneCreation({
   const resetCreationState = useCallback(() => {
     setDrawMode("Point");
     setZoneName("");
-    setPointRadiusM(150);
+    setPointRadiusM(DEFAULT_POINT_RADIUS_M);
     setPointCenter(null);
     setPolygonVertices([]);
     setSubmitError(null);
@@ -285,6 +295,11 @@ export function useZoneCreation({
     setPointRadiusM(clampPointRadiusM(value));
   }, []);
 
+  const notifyOverlapError = useCallback(() => {
+    setSubmitError(translations.zoneCreateOverlapError);
+    setSubmitSuccess(null);
+  }, [translations.zoneCreateOverlapError]);
+
   const submit = useCallback(async (): Promise<boolean> => {
     if (!canCreate || isSubmitting) {
       if (!canCreate) {
@@ -302,7 +317,7 @@ export function useZoneCreation({
       return false;
     }
 
-    let geometry: unknown;
+    let geometry: ZoneGeometry;
 
     if (drawMode === "Point") {
       if (!pointCenter) {
@@ -334,6 +349,20 @@ export function useZoneCreation({
       };
     }
 
+    let hasClientConflict = false;
+    try {
+      hasClientConflict = existingZones.some((zone) =>
+        zoneGeometriesTouchOrIntersect(zone.geometry, geometry),
+      );
+    } catch {
+      hasClientConflict = false;
+    }
+
+    if (hasClientConflict) {
+      notifyOverlapError();
+      return false;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitSuccess(null);
@@ -351,11 +380,17 @@ export function useZoneCreation({
       });
 
       const payload = (await response.json().catch(() => ({}))) as {
+        errorCode?: string;
         error?: string;
         zone?: ZoneDTO;
       };
 
       if (!response.ok) {
+        if (payload.errorCode === "ZONE_GEOMETRY_CONFLICT") {
+          notifyOverlapError();
+          return false;
+        }
+
         setSubmitError(payload.error ?? translations.zoneCreateFailedFallback);
         return false;
       }
@@ -364,9 +399,9 @@ export function useZoneCreation({
         onZoneCreated(payload.zone);
       }
 
-    setZoneName("");
-    clearGeometry();
-    setSubmitSuccess(translations.zoneCreateSuccess);
+      setZoneName("");
+      clearGeometry();
+      setSubmitSuccess(translations.zoneCreateSuccess);
       return true;
     } catch {
       setSubmitError(translations.zoneCreateFailedFallback);
@@ -378,6 +413,7 @@ export function useZoneCreation({
     canCreate,
     clearGeometry,
     drawMode,
+    existingZones,
     isSubmitting,
     onZoneCreated,
     pointCenter,
@@ -385,11 +421,13 @@ export function useZoneCreation({
     polygonVertices,
     translations.zoneCreateFailedFallback,
     translations.zoneCreateNameRequired,
+    translations.zoneCreateOverlapError,
     translations.zoneCreatePointRequired,
     translations.zoneCreatePolygonRequired,
     translations.zoneCreateSuccess,
     translations.zoneCreateTermsRequired,
     zoneName,
+    notifyOverlapError,
   ]);
 
   return {

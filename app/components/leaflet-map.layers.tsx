@@ -21,17 +21,25 @@ const USER_LOCATION_ZOOM = 16;
 type Position = [number, number];
 
 type ViewportZoneFetcherProps = {
+  onViewportInteractionStarted: () => void;
   onViewportChanged: (query: ViewportQuery) => void;
 };
 
 export function ViewportZoneFetcher({
+  onViewportInteractionStarted,
   onViewportChanged,
 }: ViewportZoneFetcherProps) {
   const map = useMap();
 
   useMapEvents({
+    movestart() {
+      onViewportInteractionStarted();
+    },
     moveend() {
       onViewportChanged(toViewportQuery(map));
+    },
+    zoomstart() {
+      onViewportInteractionStarted();
     },
     zoomend() {
       onViewportChanged(toViewportQuery(map));

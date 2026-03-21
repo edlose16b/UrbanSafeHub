@@ -65,7 +65,7 @@ export default function LeafletMap({
   translations,
 }: LeafletMapProps) {
   const { isDarkMode, toggleTheme } = useMapTheme();
-  const { zones, scheduleZoneFetch } = useZonesByViewport();
+  const { zones, scheduleZoneFetch, cancelScheduledZoneFetch } = useZonesByViewport();
   const { userPosition, locationStatus, requestUserLocation } = useUserLocation();
 
   const tileUrl = isDarkMode ? MAP_TILE_STYLES.dark : MAP_TILE_STYLES.light;
@@ -125,7 +125,10 @@ export default function LeafletMap({
         scrollWheelZoom
         className="w-screen h-screen"
       >
-        <ViewportZoneFetcher onViewportChanged={scheduleZoneFetch} />
+        <ViewportZoneFetcher
+          onViewportInteractionStarted={cancelScheduledZoneFetch}
+          onViewportChanged={scheduleZoneFetch}
+        />
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
         <ZoneLayer zones={zones} translations={translations} />

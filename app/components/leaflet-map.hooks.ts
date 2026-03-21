@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { LocationStatus, ViewportQuery } from "./leaflet-map.types";
 import {
+  shouldFetchViewport,
   getInitialLocationStatus,
   getSystemPrefersDarkMode,
 } from "./leaflet-map.utils";
 
-const VIEWPORT_FETCH_DEBOUNCE_MS = 250;
+const VIEWPORT_FETCH_DEBOUNCE_MS = 350;
 
 type GeolocationOptions = {
   enableHighAccuracy: boolean;
@@ -45,6 +46,7 @@ export function useZonesByViewport() {
   const [zones, setZones] = useState<ZoneDTO[]>([]);
   const activeRequestRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastFetchedViewportRef = useRef<ViewportQuery | null>(null);
 
   const fetchZones = useCallback(async (query: ViewportQuery) => {
     const requestId = activeRequestRef.current + 1;
@@ -76,30 +78,42 @@ export function useZonesByViewport() {
     setZones(Array.isArray(payload.zones) ? payload.zones : []);
   }, []);
 
+  const cancelScheduledZoneFetch = useCallback(() => {
+    if (!debounceRef.current) {
+      return;
+    }
+
+    clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+  }, []);
+
   const scheduleZoneFetch = useCallback(
     (query: ViewportQuery) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+      if (!shouldFetchViewport(query, lastFetchedViewportRef.current)) {
+        return;
       }
 
+      cancelScheduledZoneFetch();
+
       debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
+        lastFetchedViewportRef.current = query;
         void fetchZones(query);
       }, VIEWPORT_FETCH_DEBOUNCE_MS);
     },
-    [fetchZones],
+    [cancelScheduledZoneFetch, fetchZones],
   );
 
   useEffect(() => {
     return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
+      cancelScheduledZoneFetch();
     };
-  }, []);
+  }, [cancelScheduledZoneFetch]);
 
   return {
     zones,
     scheduleZoneFetch,
+    cancelScheduledZoneFetch,
   };
 }
 

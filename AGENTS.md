@@ -15,6 +15,8 @@ Read PROJECT.md to understand project goals.
 For Supabase MCP use
 `supabase_sahakum`
 
+don't need to add migrations for update tables, you can remove table and create new migrations. the BD is under building.
+
 ## Rules
 
 - All words should use i18n

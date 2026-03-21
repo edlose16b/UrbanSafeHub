@@ -8,6 +8,7 @@ const EARTH_RADIUS_METERS = 6_371_000;
 export const MIN_CENTER_MOVEMENT_METERS = 100;
 export const CENTER_MOVEMENT_RADIUS_RATIO = 0.2;
 export const ZOOM_RADIUS_CHANGE_RATIO = 0.15;
+const FLOATING_POINT_EPSILON = 1e-9;
 
 function toHex(value: number): string {
   return value.toString(16).padStart(2, "0");
@@ -89,7 +90,7 @@ export function shouldFetchViewport(
     next.radiusKm * 1000 * CENTER_MOVEMENT_RADIUS_RATIO,
   );
 
-  if (distanceMeters >= movementThresholdMeters) {
+  if (distanceMeters + FLOATING_POINT_EPSILON >= movementThresholdMeters) {
     return true;
   }
 
@@ -98,7 +99,7 @@ export function shouldFetchViewport(
   }
 
   const radiusChangeRatio = Math.abs(next.radiusKm - previous.radiusKm) / previous.radiusKm;
-  return radiusChangeRatio >= ZOOM_RADIUS_CHANGE_RATIO;
+  return radiusChangeRatio + FLOATING_POINT_EPSILON >= ZOOM_RADIUS_CHANGE_RATIO;
 }
 
 export function toViewportQuery(map: LeafletMap): ViewportQuery {

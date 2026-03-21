@@ -70,6 +70,18 @@ model Profile {
   @@map("profiles")
 }
 
+model RatingCategory {
+  slug                String                @id
+  label               String
+  requiresTimeSegment Boolean               @map("requires_time_segment")
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime              @default(now()) @map("updated_at") @db.Timestamptz(6)
+  ratings             ZoneRating[]
+  ratingAggregates    ZoneRatingAggregate[]
+
+  @@map("rating_categories")
+}
+
 model Zone {
   id         String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
@@ -93,39 +105,36 @@ model Zone {
 }
 
 model ZoneRating {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  zoneId         String      @map("zone_id") @db.Uuid
-  userId         String      @map("user_id") @db.Uuid
-  timeSegment    TimeSegment @map("time_segment")
-  crimeLevel     Int         @map("crime_level")
-  lighting       Int
-  footTraffic    Int         @map("foot_traffic")
-  overallSafety  Int         @map("overall_safety")
-  openBusinesses Boolean     @map("open_businesses")
-  isCurrent      Boolean     @default(true) @map("is_current")
-  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zoneId       String       @map("zone_id") @db.Uuid
+  userId       String       @map("user_id") @db.Uuid
+  categorySlug String       @map("category_slug")
+  timeSegment  TimeSegment? @map("time_segment")
+  score        Int
+  isCurrent    Boolean      @default(true) @map("is_current")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  zone Zone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
-  user Profile @relation(fields: [userId], references: [id], onDelete: Restrict)
+  category RatingCategory @relation(fields: [categorySlug], references: [slug], onDelete: Restrict)
+  zone     Zone           @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  user     Profile        @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  @@index([zoneId, timeSegment, isCurrent])
+  @@index([zoneId, categorySlug, timeSegment, isCurrent])
   @@map("zone_ratings")
 }
 
 model ZoneRatingAggregate {
-  zoneId              String      @map("zone_id") @db.Uuid
-  timeSegment         TimeSegment @map("time_segment")
-  ratingsCount        Int         @default(0) @map("ratings_count")
-  avgCrimeLevel       Decimal?    @map("avg_crime_level") @db.Decimal(4, 2)
-  avgLighting         Decimal?    @map("avg_lighting") @db.Decimal(4, 2)
-  avgFootTraffic      Decimal?    @map("avg_foot_traffic") @db.Decimal(4, 2)
-  avgOverallSafety    Decimal?    @map("avg_overall_safety") @db.Decimal(4, 2)
-  openBusinessesRatio Decimal?    @map("open_businesses_ratio") @db.Decimal(5, 4)
-  updatedAt           DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zoneId       String       @map("zone_id") @db.Uuid
+  categorySlug String       @map("category_slug")
+  timeSegment  TimeSegment? @map("time_segment")
+  ratingsCount Int          @default(0) @map("ratings_count")
+  avgScore     Decimal?     @map("avg_score") @db.Decimal(4, 2)
+  updatedAt    DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  category RatingCategory @relation(fields: [categorySlug], references: [slug], onDelete: Restrict)
+  zone     Zone           @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  @@id([zoneId, timeSegment])
+  @@index([zoneId, categorySlug])
   @@map("zone_rating_aggregates")
 }
 

@@ -24,7 +24,7 @@ type ZoneRow = {
 type ZoneCrimeAggregateRow = {
   zone_id: string;
   ratings_count: number;
-  avg_crime_level: number | null;
+  avg_score: number | null;
 };
 
 function isPosition(value: unknown): value is GeoJsonPosition {
@@ -237,7 +237,8 @@ export class SupabaseZoneRepository
     if (zoneIds.length > 0) {
       const { data: aggregateData, error: aggregateError } = await this.supabase
         .from("zone_rating_aggregates")
-        .select("zone_id, ratings_count, avg_crime_level")
+        .select("zone_id, ratings_count, avg_score")
+        .eq("category_slug", "crime")
         .in("zone_id", zoneIds);
 
       if (aggregateError) {
@@ -249,7 +250,7 @@ export class SupabaseZoneRepository
 
       for (const aggregate of (aggregateData ?? []) as ZoneCrimeAggregateRow[]) {
         if (
-          !isFiniteNumber(aggregate.avg_crime_level) ||
+          !isFiniteNumber(aggregate.avg_score) ||
           !isFiniteNumber(aggregate.ratings_count) ||
           aggregate.ratings_count <= 0
         ) {
@@ -260,7 +261,7 @@ export class SupabaseZoneRepository
         const previousWeight = weightByZone.get(aggregate.zone_id) ?? 0;
         weightedSumByZone.set(
           aggregate.zone_id,
-          previousWeightedSum + aggregate.avg_crime_level * aggregate.ratings_count,
+          previousWeightedSum + aggregate.avg_score * aggregate.ratings_count,
         );
         weightByZone.set(aggregate.zone_id, previousWeight + aggregate.ratings_count);
       }

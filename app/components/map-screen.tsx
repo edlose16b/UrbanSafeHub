@@ -18,6 +18,27 @@ export type MapTranslations = {
   crimeLegendHigh: string;
   crimeTooltipNoData: string;
   crimeTooltipLevel: string;
+  zoneCreatePanelTitle: string;
+  zoneCreateNameLabel: string;
+  zoneCreateNamePlaceholder: string;
+  zoneCreateTypeLabel: string;
+  zoneCreateTypeRadius: string;
+  zoneCreateTypePolygon: string;
+  zoneCreateRadiusLabel: string;
+  zoneCreateRadiusHint: string;
+  zoneCreatePointHint: string;
+  zoneCreatePointReady: string;
+  zoneCreatePolygonHint: string;
+  zoneCreatePolygonPoints: string;
+  zoneCreateUndoPoint: string;
+  zoneCreateClearDraft: string;
+  zoneCreateSubmit: string;
+  zoneCreateSubmitting: string;
+  zoneCreateSuccess: string;
+  zoneCreateNameRequired: string;
+  zoneCreatePointRequired: string;
+  zoneCreatePolygonRequired: string;
+  zoneCreateFailedFallback: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

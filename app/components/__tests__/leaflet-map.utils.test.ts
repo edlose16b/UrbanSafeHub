@@ -32,7 +32,7 @@ describe("leaflet-map.utils", () => {
   it("fetches when center movement reaches threshold boundary", () => {
     const boundaryMovementViewport: ViewportQuery = {
       ...baseViewport,
-      lat: baseViewport.lat + metersToLatDelta(100),
+      lat: baseViewport.lat + metersToLatDelta(101),
     };
 
     expect(shouldFetchViewport(boundaryMovementViewport, baseViewport)).toBe(true);

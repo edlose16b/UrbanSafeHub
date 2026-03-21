@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
-import type { LocationStatus, ViewportQuery } from "./leaflet-map.types";
+import type { MapTranslations } from "./map-screen";
+import type {
+  DrawMode,
+  LatLngPosition,
+  LocationStatus,
+  ViewportQuery,
+} from "./leaflet-map.types";
 import {
   shouldFetchViewport,
   getInitialLocationStatus,
@@ -67,6 +73,10 @@ export function useZonesByViewport() {
       return;
     }
 
+    if (response.bodyUsed) {
+      return;
+    }
+
     const payload = (await response.json()) as {
       zones?: ZoneDTO[];
     };
@@ -110,8 +120,13 @@ export function useZonesByViewport() {
     };
   }, [cancelScheduledZoneFetch]);
 
+  const prependZone = useCallback((zone: ZoneDTO) => {
+    setZones((current) => [zone, ...current.filter((item) => item.id !== zone.id)]);
+  }, []);
+
   return {
     zones,
+    prependZone,
     scheduleZoneFetch,
     cancelScheduledZoneFetch,
   };
@@ -184,5 +199,198 @@ export function useUserLocation() {
     userPosition,
     locationStatus,
     requestUserLocation,
+  };
+}
+
+type ZoneCreationHookOptions = {
+  canCreate: boolean;
+  translations: MapTranslations;
+  onZoneCreated: (zone: ZoneDTO) => void;
+};
+
+function clampPointRadiusM(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 10;
+  }
+
+  return Math.max(10, Math.min(2000, Math.round(value)));
+}
+
+export function useZoneCreation({
+  canCreate,
+  translations,
+  onZoneCreated,
+}: ZoneCreationHookOptions) {
+  const [drawMode, setDrawMode] = useState<DrawMode>("Point");
+  const [zoneName, setZoneName] = useState("");
+  const [pointRadiusM, setPointRadiusM] = useState(150);
+  const [pointCenter, setPointCenter] = useState<LatLngPosition | null>(null);
+  const [polygonVertices, setPolygonVertices] = useState<LatLngPosition[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
+  const clearGeometry = useCallback(() => {
+    setPointCenter(null);
+    setPolygonVertices([]);
+  }, []);
+
+  const handleDrawModeChange = useCallback(
+    (nextMode: DrawMode) => {
+      setDrawMode(nextMode);
+      clearGeometry();
+      setSubmitError(null);
+      setSubmitSuccess(null);
+    },
+    [clearGeometry],
+  );
+
+  const handleMapClick = useCallback(
+    (position: LatLngPosition) => {
+      if (!canCreate) {
+        return;
+      }
+
+      setSubmitError(null);
+      setSubmitSuccess(null);
+
+      if (drawMode === "Point") {
+        setPointCenter(position);
+        return;
+      }
+
+      setPolygonVertices((current) => [...current, position]);
+    },
+    [canCreate, drawMode],
+  );
+
+  const removeLastPolygonVertex = useCallback(() => {
+    setPolygonVertices((current) => current.slice(0, -1));
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  }, []);
+
+  const onPointRadiusChange = useCallback((value: number) => {
+    setPointRadiusM(clampPointRadiusM(value));
+  }, []);
+
+  const submit = useCallback(async (): Promise<boolean> => {
+    if (!canCreate || isSubmitting) {
+      return false;
+    }
+
+    const name = zoneName.trim();
+
+    if (!name) {
+      setSubmitError(translations.zoneCreateNameRequired);
+      setSubmitSuccess(null);
+      return false;
+    }
+
+    let geometry: unknown;
+
+    if (drawMode === "Point") {
+      if (!pointCenter) {
+        setSubmitError(translations.zoneCreatePointRequired);
+        setSubmitSuccess(null);
+        return false;
+      }
+
+      geometry = {
+        type: "Point",
+        coordinates: [pointCenter[1], pointCenter[0]],
+        radiusM: pointRadiusM,
+      };
+    } else {
+      if (polygonVertices.length < 3) {
+        setSubmitError(translations.zoneCreatePolygonRequired);
+        setSubmitSuccess(null);
+        return false;
+      }
+
+      const ring = [...polygonVertices, polygonVertices[0]].map(([lat, lng]) => [
+        lng,
+        lat,
+      ]);
+
+      geometry = {
+        type: "Polygon",
+        coordinates: [ring],
+      };
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+
+    try {
+      const response = await fetch("/api/zones", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          geometry,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        zone?: ZoneDTO;
+      };
+
+      if (!response.ok) {
+        setSubmitError(payload.error ?? translations.zoneCreateFailedFallback);
+        return false;
+      }
+
+      if (payload.zone) {
+        onZoneCreated(payload.zone);
+      }
+
+      setZoneName("");
+      clearGeometry();
+      setSubmitSuccess(translations.zoneCreateSuccess);
+      return true;
+    } catch {
+      setSubmitError(translations.zoneCreateFailedFallback);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    canCreate,
+    clearGeometry,
+    drawMode,
+    isSubmitting,
+    onZoneCreated,
+    pointCenter,
+    pointRadiusM,
+    polygonVertices,
+    translations.zoneCreateFailedFallback,
+    translations.zoneCreateNameRequired,
+    translations.zoneCreatePointRequired,
+    translations.zoneCreatePolygonRequired,
+    translations.zoneCreateSuccess,
+    zoneName,
+  ]);
+
+  return {
+    drawMode,
+    zoneName,
+    pointRadiusM,
+    pointCenter,
+    polygonVertices,
+    isSubmitting,
+    submitError,
+    submitSuccess,
+    setZoneName,
+    onPointRadiusChange,
+    handleDrawModeChange,
+    handleMapClick,
+    clearGeometry,
+    removeLastPolygonVertex,
+    submit,
   };
 }

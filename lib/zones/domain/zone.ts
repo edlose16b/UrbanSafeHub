@@ -1,7 +1,3 @@
-export const ZONE_TYPES = ["intersection", "bus_stop"] as const;
-
-export type ZoneType = (typeof ZONE_TYPES)[number];
-
 export type GeoJsonPosition = [number, number];
 
 export type GeoJsonPoint = {
@@ -20,7 +16,6 @@ export type ZoneGeometry = GeoJsonPoint | GeoJsonPolygon;
 export type ZoneSnapshot = {
   id: string;
   name: string;
-  zoneType: ZoneType;
   geometry: ZoneGeometry;
   crimeLevel: number | null;
   createdBy: string;

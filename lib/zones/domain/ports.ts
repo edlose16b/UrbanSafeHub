@@ -1,8 +1,7 @@
-import type { ZoneGeometry, ZoneSnapshot, ZoneType } from "./zone";
+import type { ZoneGeometry, ZoneSnapshot } from "./zone";
 
 export type CreateZoneRecord = {
   name: string;
-  zoneType: ZoneType;
   geometry: ZoneGeometry;
   createdBy: string;
 };

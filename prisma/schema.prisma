@@ -23,13 +23,6 @@ enum TimeSegment {
   @@map("time_segment")
 }
 
-enum ZoneType {
-  intersection
-  bus_stop
-
-  @@map("zone_type")
-}
-
 enum ZoneVisibility {
   active
   hidden
@@ -80,7 +73,6 @@ model Profile {
 model Zone {
   id         String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
-  zoneType   ZoneType                               @map("zone_type")
   geom       Unsupported("geometry(Geometry,4326)")
   radiusM    Int?                                   @map("radius_m")
   createdBy  String                                 @map("created_by") @db.Uuid

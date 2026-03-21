@@ -51,10 +51,9 @@ alter table public.zones
 ```sql
 select setseed(0.42026);
 
-insert into public.zones (name, zone_type, geom, radius_m, created_by, visibility)
+insert into public.zones (name, geom, radius_m, created_by, visibility)
 select
   format('Zona Prueba Lima %s', gs) as name,
-  case when gs % 4 = 0 then 'bus_stop'::zone_type else 'intersection'::zone_type end as zone_type,
   st_setsrid(
     st_makepoint(
       -77.0428 + ((random() - 0.5) * 0.34),

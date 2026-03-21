@@ -1,10 +1,8 @@
 import {
-  ZONE_TYPES,
   type GeoJsonPoint,
   type GeoJsonPolygon,
   type GeoJsonPosition,
   type ZoneGeometry,
-  type ZoneType,
 } from "./zone";
 import { isFiniteNumber } from "../utils/number";
 
@@ -122,20 +120,6 @@ export function sanitizeZoneName(value: unknown): string {
   }
 
   return normalized;
-}
-
-export function parseZoneType(value: unknown): ZoneType {
-  if (typeof value !== "string") {
-    throw new ZoneValidationError("Zone type must be a string.");
-  }
-
-  if (!ZONE_TYPES.includes(value as ZoneType)) {
-    throw new ZoneValidationError(
-      `Zone type must be one of: ${ZONE_TYPES.join(", ")}.`,
-    );
-  }
-
-  return value as ZoneType;
 }
 
 export function parseZoneGeometry(value: unknown): ZoneGeometry {

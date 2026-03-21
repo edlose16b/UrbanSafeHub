@@ -8,7 +8,6 @@ import type {
   GeoJsonPosition,
   ZoneGeometry,
   ZoneSnapshot,
-  ZoneType,
 } from "../domain/zone";
 import { ZoneValidationError } from "../domain/validation";
 import { isFiniteNumber } from "../utils/number";
@@ -16,7 +15,6 @@ import { isFiniteNumber } from "../utils/number";
 type ZoneRow = {
   id: string;
   name: string;
-  zone_type: ZoneType;
   geom: unknown;
   radius_m: number | null;
   created_by: string;
@@ -117,7 +115,6 @@ function toSnapshot(row: ZoneRow, crimeLevel: number | null): ZoneSnapshot {
   return {
     id: row.id,
     name: row.name,
-    zoneType: row.zone_type,
     geometry: parseGeometry(row.geom, row.radius_m),
     crimeLevel,
     createdBy: row.created_by,
@@ -222,7 +219,7 @@ export class SupabaseZoneRepository
   ): Promise<ZoneSnapshot[]> {
     const { data, error } = await this.supabase
       .from("zones")
-      .select("id, name, zone_type, geom, radius_m, created_by, created_at")
+      .select("id, name, geom, radius_m, created_by, created_at")
       .eq("visibility", "active")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -290,7 +287,6 @@ export class SupabaseZoneRepository
 
   async create(record: {
     name: string;
-    zoneType: ZoneType;
     geometry: ZoneGeometry;
     createdBy: string;
   }): Promise<ZoneSnapshot> {
@@ -298,12 +294,11 @@ export class SupabaseZoneRepository
       .from("zones")
       .insert({
         name: record.name,
-        zone_type: record.zoneType,
         geom: toEwktGeometry(record.geometry),
         radius_m: record.geometry.type === "Point" ? record.geometry.radiusM : null,
         created_by: record.createdBy,
       })
-      .select("id, name, zone_type, geom, radius_m, created_by, created_at")
+      .select("id, name, geom, radius_m, created_by, created_at")
       .single();
 
     if (error) {

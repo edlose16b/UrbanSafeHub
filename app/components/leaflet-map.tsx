@@ -54,7 +54,7 @@ function CrimeLegend({
   high: string;
 }) {
   return (
-    <div className="absolute left-4 bottom-8 z-[1000] rounded-md border border-border bg-surface px-3 py-2 text-xs text-foreground shadow-md">
+    <div className="absolute left-4 bottom-8 z-[1000] rounded-md border border-border bg-surface-solid px-3 py-2 text-xs text-foreground shadow-md">
       <div className="mb-1 font-medium">{title}</div>
       <div className="flex items-center gap-2">
         <span className="inline-block h-2 w-6 rounded bg-[#22c55e]" />
@@ -121,7 +121,7 @@ function ZoneCreationPanel({
 
   return (
     <form
-      className="absolute top-4 left-4 z-[1000] w-80 rounded-xl border border-border bg-surface p-4 text-sm text-foreground shadow-md backdrop-blur-[1px]"
+      className="absolute top-4 left-4 z-[1000] w-80 rounded-xl border border-border bg-surface-solid p-4 text-sm text-foreground shadow-md backdrop-blur-[1px]"
       onSubmit={(event) => {
         event.preventDefault();
         void onSubmit();
@@ -317,6 +317,7 @@ export default function LeafletMap({
 
   const tileUrl = isDarkMode ? MAP_TILE_STYLES.dark : MAP_TILE_STYLES.light;
   const toggleIcon = isDarkMode ? MAP_STYLE_ICON.dark : MAP_STYLE_ICON.light;
+  const iconClassName = isDarkMode ? "brightness-0 invert" : "";
   const themeAriaLabel = isDarkMode
     ? translations.switchToLightMapStyle
     : translations.switchToDarkMapStyle;
@@ -366,7 +367,14 @@ export default function LeafletMap({
           aria-label={themeAriaLabel}
           title={isDarkMode ? translations.lightModeTitle : translations.darkModeTitle}
         >
-          <Image src={toggleIcon} alt="" width={20} height={20} aria-hidden />
+          <Image
+            src={toggleIcon}
+            alt=""
+            width={20}
+            height={20}
+            aria-hidden
+            className={iconClassName}
+          />
         </button>
       </div>
 
@@ -378,7 +386,14 @@ export default function LeafletMap({
           aria-label={translations.locateUserTitle}
           title={translations.locateUserTitle}
         >
-          <Image src={LOCATE_USER_ICON} alt="" width={20} height={20} aria-hidden />
+          <Image
+            src={LOCATE_USER_ICON}
+            alt=""
+            width={20}
+            height={20}
+            aria-hidden
+            className={iconClassName}
+          />
         </button>
       </div>
 
@@ -392,6 +407,7 @@ export default function LeafletMap({
         center={LIMA_CENTER}
         zoom={INITIAL_ZOOM}
         scrollWheelZoom
+        zoomControl={false}
         className="w-screen h-screen"
       >
         <ViewportZoneFetcher

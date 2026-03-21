@@ -142,7 +142,7 @@ export default function AuthAvatarMenu({
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 mt-2 w-52 rounded-xl border border-border bg-surface-solid p-2 text-sm text-foreground shadow-lg">
+        <div className="absolute right-0 z-[1100] mt-2 w-52 rounded-xl border border-border bg-surface-solid p-2 text-sm text-foreground shadow-lg">
           {currentUser.isAnonymous ? (
             <button
               type="button"

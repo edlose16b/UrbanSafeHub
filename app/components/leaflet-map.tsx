@@ -1,20 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import {
-  Circle,
-  CircleMarker,
-  MapContainer,
-  Polygon,
-  TileLayer,
-  Tooltip,
-  useMap,
-  useMapEvents,
-} from "react-leaflet";
-import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
-import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
-import { clampRadiusKm } from "@/lib/zones/utils/number";
+import { MapContainer, TileLayer } from "react-leaflet";
 import {
   INITIAL_ZOOM,
   LIMA_CENTER,
@@ -23,117 +10,52 @@ import {
   MAP_TILE_STYLES,
   TILE_ATTRIBUTION,
 } from "../constants/map";
-import AuthAvatarMenu, { type AuthMenuTranslations } from "./auth-avatar-menu";
-import type { MapTranslations } from "./map-screen";
+import AuthAvatarMenu from "./auth-avatar-menu";
+import {
+  RecenterOnUserPosition,
+  UserLocationLayer,
+  ViewportZoneFetcher,
+  ZoneLayer,
+} from "./leaflet-map.layers";
+import { useMapTheme, useUserLocation, useZonesByViewport } from "./leaflet-map.hooks";
+import type { LeafletMapProps } from "./leaflet-map.types";
 
-function getSystemPrefersDarkMode(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-function getInitialLocationStatus(): LocationStatus {
-  if (typeof window === "undefined") {
-    return "idle";
-  }
-
-  return "geolocation" in navigator ? "idle" : "unavailable";
-}
-
-type LeafletMapProps = {
-  lang: string;
-  initialUser: AuthUserSnapshot;
-  authTranslations: AuthMenuTranslations;
-  translations: MapTranslations;
-};
-
-type LocationStatus = "idle" | "success" | "denied" | "unavailable";
-type ViewportQuery = {
-  lat: number;
-  lng: number;
-  radiusKm: number;
-};
-
-const USER_LOCATION_ZOOM = 16;
-const VIEWPORT_FETCH_DEBOUNCE_MS = 250;
-const NO_CRIME_DATA_COLOR = "#94a3b8";
-
-function toHex(value: number): string {
-  return value.toString(16).padStart(2, "0");
-}
-
-function getCrimeHeatColor(crimeLevel: number | null): string {
-  if (crimeLevel === null) {
-    return NO_CRIME_DATA_COLOR;
-  }
-
-  const normalized = Math.max(1, Math.min(5, crimeLevel));
-  const ratio = (normalized - 1) / 4;
-  const red = Math.round(239 * ratio + 34 * (1 - ratio));
-  const green = Math.round(68 * ratio + 197 * (1 - ratio));
-  const blue = Math.round(68 * ratio + 94 * (1 - ratio));
-
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-}
-
-function getCrimeHeatIntensity(crimeLevel: number | null): number {
-  if (crimeLevel === null) {
-    return 0.45;
-  }
-
-  const normalized = Math.max(1, Math.min(5, crimeLevel));
-  return 0.35 + ((normalized - 1) / 4) * 0.65;
-}
-
-function RecenterOnUserPosition({
-  position,
+function LocationNotice({
+  locationNotice,
 }: {
-  position: [number, number];
+  locationNotice: string | null;
 }) {
-  const map = useMap();
+  if (!locationNotice) {
+    return null;
+  }
 
-  useEffect(() => {
-    map.setView(position, USER_LOCATION_ZOOM, { animate: true });
-  }, [map, position]);
-
-  return null;
+  return (
+    <p className="absolute top-4 left-4 z-[1000] max-w-80 rounded-md bg-black/75 px-3 py-2 text-sm text-white shadow-md">
+      {locationNotice}
+    </p>
+  );
 }
 
-function toViewportQuery(map: ReturnType<typeof useMap>): ViewportQuery {
-  const center = map.getCenter();
-  const bounds = map.getBounds();
-  const radiusKm = clampRadiusKm(center.distanceTo(bounds.getNorthEast()) / 1000);
-
-  return {
-    lat: center.lat,
-    lng: center.lng,
-    radiusKm,
-  };
-}
-
-function ViewportZoneFetcher({
-  onViewportChanged,
+function CrimeLegend({
+  title,
+  low,
+  high,
 }: {
-  onViewportChanged: (query: ViewportQuery) => void;
+  title: string;
+  low: string;
+  high: string;
 }) {
-  const map = useMap();
-
-  useMapEvents({
-    moveend() {
-      onViewportChanged(toViewportQuery(map));
-    },
-    zoomend() {
-      onViewportChanged(toViewportQuery(map));
-    },
-  });
-
-  useEffect(() => {
-    onViewportChanged(toViewportQuery(map));
-  }, [map, onViewportChanged]);
-
-  return null;
+  return (
+    <div className="absolute left-4 bottom-8 z-[1000] rounded-md border border-black/10 bg-white/95 px-3 py-2 text-xs text-slate-800 shadow-md">
+      <div className="mb-1 font-medium">{title}</div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block h-2 w-6 rounded bg-[#22c55e]" />
+        <span>{low}</span>
+        <span className="inline-block h-2 w-6 rounded bg-[#e11d48]" />
+        <span>{high}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function LeafletMap({
@@ -142,133 +64,13 @@ export default function LeafletMap({
   authTranslations,
   translations,
 }: LeafletMapProps) {
-  const [isDarkMode, setIsDarkMode] = useState(getSystemPrefersDarkMode);
-  const [zones, setZones] = useState<ZoneDTO[]>([]);
-  const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
-  const [locationStatus, setLocationStatus] =
-    useState<LocationStatus>(getInitialLocationStatus);
-  const activeRequestRef = useRef(0);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const fetchZones = useCallback(async (query: ViewportQuery) => {
-    const requestId = activeRequestRef.current + 1;
-    activeRequestRef.current = requestId;
-    const params = new URLSearchParams({
-      lat: query.lat.toFixed(7),
-      lng: query.lng.toFixed(7),
-      radiusKm: query.radiusKm.toFixed(4),
-    });
-
-    const response = await fetch(`/api/zones?${params.toString()}`, {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return;
-    }
-
-    const payload = (await response.json()) as {
-      zones?: ZoneDTO[];
-    };
-
-    if (activeRequestRef.current !== requestId) {
-      return;
-    }
-
-    setZones(Array.isArray(payload.zones) ? payload.zones : []);
-  }, []);
-
-  const scheduleZoneFetch = useCallback(
-    (query: ViewportQuery) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-
-      debounceRef.current = setTimeout(() => {
-        void fetchZones(query);
-      }, VIEWPORT_FETCH_DEBOUNCE_MS);
-    },
-    [fetchZones],
-  );
-
-  const requestUserLocation = () => {
-    if (!("geolocation" in navigator)) {
-      setLocationStatus("unavailable");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserPosition([position.coords.latitude, position.coords.longitude]);
-        setLocationStatus("success");
-      },
-      (error) => {
-        if (error.code === error.PERMISSION_DENIED) {
-          setLocationStatus("denied");
-          return;
-        }
-
-        setLocationStatus("unavailable");
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10_000,
-        maximumAge: 60_000,
-      },
-    );
-  };
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (locationStatus !== "idle") {
-      return;
-    }
-
-    let isCancelled = false;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (isCancelled) {
-          return;
-        }
-
-        setUserPosition([position.coords.latitude, position.coords.longitude]);
-        setLocationStatus("success");
-      },
-      (error) => {
-        if (isCancelled) {
-          return;
-        }
-
-        if (error.code === error.PERMISSION_DENIED) {
-          setLocationStatus("denied");
-          return;
-        }
-
-        setLocationStatus("unavailable");
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10_000,
-        maximumAge: 60_000,
-      },
-    );
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [locationStatus]);
+  const { isDarkMode, toggleTheme } = useMapTheme();
+  const { zones, scheduleZoneFetch } = useZonesByViewport();
+  const { userPosition, locationStatus, requestUserLocation } = useUserLocation();
 
   const tileUrl = isDarkMode ? MAP_TILE_STYLES.dark : MAP_TILE_STYLES.light;
   const toggleIcon = isDarkMode ? MAP_STYLE_ICON.dark : MAP_STYLE_ICON.light;
-  const ariaLabel = isDarkMode
+  const themeAriaLabel = isDarkMode
     ? translations.switchToLightMapStyle
     : translations.switchToDarkMapStyle;
   const locationNotice =
@@ -280,11 +82,8 @@ export default function LeafletMap({
 
   return (
     <div className="relative w-screen h-screen">
-      {locationNotice ? (
-        <p className="absolute top-4 left-4 z-[1000] max-w-80 rounded-md bg-black/75 px-3 py-2 text-sm text-white shadow-md">
-          {locationNotice}
-        </p>
-      ) : null}
+      <LocationNotice locationNotice={locationNotice} />
+
       <div className="absolute top-4 right-4 z-[1000] flex items-center gap-2">
         <AuthAvatarMenu
           lang={lang}
@@ -293,14 +92,15 @@ export default function LeafletMap({
         />
         <button
           type="button"
-          onClick={() => setIsDarkMode((current) => !current)}
+          onClick={toggleTheme}
           className="rounded-full border border-black/20 bg-white/95 p-2 text-black shadow-md transition-colors hover:bg-white"
-          aria-label={ariaLabel}
+          aria-label={themeAriaLabel}
           title={isDarkMode ? translations.lightModeTitle : translations.darkModeTitle}
         >
           <Image src={toggleIcon} alt="" width={20} height={20} aria-hidden />
         </button>
       </div>
+
       <div className="absolute right-4 bottom-10 z-[1000]">
         <button
           type="button"
@@ -312,15 +112,12 @@ export default function LeafletMap({
           <Image src={LOCATE_USER_ICON} alt="" width={20} height={20} aria-hidden />
         </button>
       </div>
-      <div className="absolute left-4 bottom-8 z-[1000] rounded-md border border-black/10 bg-white/95 px-3 py-2 text-xs text-slate-800 shadow-md">
-        <div className="mb-1 font-medium">{translations.crimeLegendTitle}</div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-6 rounded bg-[#22c55e]" />
-          <span>{translations.crimeLegendLow}</span>
-          <span className="inline-block h-2 w-6 rounded bg-[#e11d48]" />
-          <span>{translations.crimeLegendHigh}</span>
-        </div>
-      </div>
+
+      <CrimeLegend
+        title={translations.crimeLegendTitle}
+        low={translations.crimeLegendLow}
+        high={translations.crimeLegendHigh}
+      />
 
       <MapContainer
         center={LIMA_CENTER}
@@ -331,126 +128,12 @@ export default function LeafletMap({
         <ViewportZoneFetcher onViewportChanged={scheduleZoneFetch} />
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
-        {zones.map((zone) => {
-          const heatColor = getCrimeHeatColor(zone.crimeLevel);
-          const heatIntensity = getCrimeHeatIntensity(zone.crimeLevel);
-
-          if (zone.geometry.type === "Point") {
-            const [longitude, latitude] = zone.geometry.coordinates;
-            const pointCenter: [number, number] = [latitude, longitude];
-            const crimeTooltip =
-              zone.crimeLevel === null
-                ? `${zone.name} • ${translations.crimeTooltipNoData}`
-                : `${zone.name} • ${translations.crimeTooltipLevel} ${zone.crimeLevel.toFixed(2)}/5`;
-            const radiusM = zone.geometry.radiusM;
-            const outerRadiusM = Math.round(radiusM * 1.6);
-            const coreRadiusM = Math.max(18, Math.round(radiusM * 0.2));
-
-            return (
-              <Fragment key={zone.id}>
-                <Circle
-                  key={`${zone.id}-outer`}
-                  center={pointCenter}
-                  radius={outerRadiusM}
-                  interactive={false}
-                  pathOptions={{
-                    stroke: false,
-                    fillColor: heatColor,
-                    fillOpacity: 0.07 * heatIntensity,
-                  }}
-                />
-                <Circle
-                  key={`${zone.id}-mid`}
-                  center={pointCenter}
-                  radius={radiusM}
-                  pathOptions={{
-                    stroke: false,
-                    fillColor: heatColor,
-                    fillOpacity: 0.2 * heatIntensity,
-                  }}
-                >
-                  <Tooltip direction="top" offset={[0, -8]}>
-                    {crimeTooltip}
-                  </Tooltip>
-                </Circle>
-                <Circle
-                  key={`${zone.id}-core`}
-                  center={pointCenter}
-                  radius={coreRadiusM}
-                  interactive={false}
-                  pathOptions={{
-                    stroke: false,
-                    fillColor: heatColor,
-                    fillOpacity: 0.45 * heatIntensity,
-                  }}
-                />
-                <CircleMarker
-                  key={`${zone.id}-hotspot`}
-                  center={pointCenter}
-                  radius={4}
-                  pathOptions={{
-                    color: "#ffffff",
-                    fillColor: heatColor,
-                    fillOpacity: 0.95,
-                    weight: 1.5,
-                  }}
-                />
-              </Fragment>
-            );
-          }
-
-          const outerRing = zone.geometry.coordinates[0];
-          const positions: [number, number][] = outerRing.map(
-            ([longitude, latitude]) => [latitude, longitude],
-          );
-
-          return (
-            <Polygon
-              key={zone.id}
-              positions={positions}
-              pathOptions={{
-                color: "#0f172a",
-                fillColor: heatColor,
-                fillOpacity: 0.35,
-                weight: 1.5,
-              }}
-            >
-              <Tooltip sticky>
-                {zone.crimeLevel === null
-                  ? `${zone.name} • ${translations.crimeTooltipNoData}`
-                  : `${zone.name} • ${translations.crimeTooltipLevel} ${zone.crimeLevel.toFixed(2)}/5`}
-              </Tooltip>
-            </Polygon>
-          );
-        })}
+        <ZoneLayer zones={zones} translations={translations} />
         {userPosition ? (
-          <>
-            <CircleMarker
-              center={userPosition}
-              radius={14}
-              interactive={false}
-              pathOptions={{
-                color: "#3b82f6",
-                fillColor: "#3b82f6",
-                fillOpacity: 0.2,
-                weight: 0,
-              }}
-            />
-            <CircleMarker
-              center={userPosition}
-              radius={6}
-              pathOptions={{
-                color: "#ffffff",
-                fillColor: "#2563eb",
-                fillOpacity: 1,
-                weight: 2,
-              }}
-            >
-              <Tooltip direction="top" offset={[0, -8]}>
-                {translations.userLocationLabel}
-              </Tooltip>
-            </CircleMarker>
-          </>
+          <UserLocationLayer
+            userPosition={userPosition}
+            userLocationLabel={translations.userLocationLabel}
+          />
         ) : null}
       </MapContainer>
     </div>

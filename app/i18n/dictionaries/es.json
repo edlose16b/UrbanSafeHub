@@ -37,14 +37,17 @@
     "zoneCreateNameRequired": "Debes ingresar un nombre para la zona.",
     "zoneCreatePointRequired": "Debes seleccionar un punto en el mapa.",
     "zoneCreatePolygonRequired": "Debes agregar al menos 3 puntos para el polígono.",
-    "zoneCreateFailedFallback": "No se pudo crear la zona. Inténtalo de nuevo."
+    "zoneCreateFailedFallback": "No se pudo crear la zona. Inténtalo de nuevo.",
+    "zoneCreateTermsAlert": "Declara solo información real y verificable. El uso de datos falsos puede afectar a toda la comunidad.",
+    "zoneCreateTermsCheckbox": "Acepto los términos y condiciones para continuar.",
+    "zoneCreateTermsRequired": "Debes aceptar los términos y condiciones para continuar."
   },
   "auth": {
     "anonymousLabel": "A",
     "openMenu": "Abrir menú de usuario",
     "signInWithGoogle": "Iniciar con Google",
-    "contributions": "Contribuciones",
-    "contributionsComingSoon": "Esta sección estará disponible pronto.",
+    "createZone": "Crear",
+    "exitCreateZone": "Salir de crear",
     "signOut": "Cerrar sesión"
   }
 }

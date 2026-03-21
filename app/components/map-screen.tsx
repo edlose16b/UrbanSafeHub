@@ -39,6 +39,9 @@ export type MapTranslations = {
   zoneCreatePointRequired: string;
   zoneCreatePolygonRequired: string;
   zoneCreateFailedFallback: string;
+  zoneCreateTermsAlert: string;
+  zoneCreateTermsCheckbox: string;
+  zoneCreateTermsRequired: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

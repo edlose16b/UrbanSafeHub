@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useCallback, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import {
   INITIAL_ZOOM,
@@ -67,6 +68,8 @@ function CrimeLegend({
 
 type ZoneCreationPanelProps = {
   isVisible: boolean;
+  isDarkMode: boolean;
+  hasAcceptedTerms: boolean;
   zoneName: string;
   drawMode: "Point" | "Polygon";
   pointRadiusM: number;
@@ -75,6 +78,7 @@ type ZoneCreationPanelProps = {
   isSubmitting: boolean;
   submitError: string | null;
   submitSuccess: string | null;
+  onAcceptedTermsChange: (checked: boolean) => void;
   onNameChange: (nextName: string) => void;
   onModeChange: (mode: "Point" | "Polygon") => void;
   onRadiusChange: (value: number) => void;
@@ -86,6 +90,8 @@ type ZoneCreationPanelProps = {
 
 function ZoneCreationPanel({
   isVisible,
+  isDarkMode,
+  hasAcceptedTerms,
   zoneName,
   drawMode,
   pointRadiusM,
@@ -94,6 +100,7 @@ function ZoneCreationPanel({
   isSubmitting,
   submitError,
   submitSuccess,
+  onAcceptedTermsChange,
   onNameChange,
   onModeChange,
   onRadiusChange,
@@ -112,17 +119,46 @@ function ZoneCreationPanel({
   );
   const shouldDisableUndo = polygonVertexCount === 0;
   const isPointMode = drawMode === "Point";
-  const isSubmitDisabled = isSubmitting || !zoneName.trim();
+  const isSubmitDisabled = isSubmitting || !zoneName.trim() || !hasAcceptedTerms;
+  const surfaceClassName = isDarkMode
+    ? "border-white/20 bg-slate-900/95 text-slate-100"
+    : "border-black/15 bg-white/95 text-slate-900";
+  const fieldClassName = isDarkMode
+    ? "border-slate-700 bg-slate-950 text-slate-100 focus:border-slate-300"
+    : "border-slate-300 bg-white text-slate-900 focus:border-slate-600";
+  const hintClassName = isDarkMode ? "text-slate-300" : "text-slate-700";
+  const secondaryHintClassName = isDarkMode ? "text-slate-400" : "text-slate-600";
+  const neutralButtonClassName = isDarkMode
+    ? "border-slate-700 bg-slate-950 text-slate-200"
+    : "border-slate-300 bg-white text-slate-700";
+  const submitButtonClassName = isDarkMode
+    ? "bg-white text-slate-900 hover:bg-slate-200"
+    : "bg-slate-900 text-white hover:bg-slate-700";
+  const termsAlertClassName = isDarkMode
+    ? "border-amber-500/40 bg-amber-900/30 text-amber-100"
+    : "border-amber-300 bg-amber-50 text-amber-900";
 
   return (
     <form
-      className="absolute top-4 left-4 z-[1000] w-80 rounded-xl border border-black/15 bg-white/95 p-4 text-sm text-slate-900 shadow-md backdrop-blur-[1px]"
+      className={`absolute top-4 left-4 z-[1000] w-80 rounded-xl border p-4 text-sm shadow-md backdrop-blur-[1px] ${surfaceClassName}`}
       onSubmit={(event) => {
         event.preventDefault();
         void onSubmit();
       }}
     >
       <h2 className="text-sm font-semibold">{translations.zoneCreatePanelTitle}</h2>
+      <div className={`mt-3 rounded-lg border px-3 py-2 text-xs ${termsAlertClassName}`}>
+        <p>{translations.zoneCreateTermsAlert}</p>
+        <label className="mt-2 flex cursor-pointer items-start gap-2">
+          <input
+            type="checkbox"
+            checked={hasAcceptedTerms}
+            onChange={(event) => onAcceptedTermsChange(event.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>{translations.zoneCreateTermsCheckbox}</span>
+        </label>
+      </div>
 
       <label className="mt-3 block">
         <span className="mb-1 block text-xs font-medium">
@@ -133,7 +169,7 @@ function ZoneCreationPanel({
           value={zoneName}
           onChange={(event) => onNameChange(event.target.value)}
           placeholder={translations.zoneCreateNamePlaceholder}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-slate-600"
+          className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${fieldClassName}`}
           maxLength={120}
         />
       </label>
@@ -147,7 +183,7 @@ function ZoneCreationPanel({
             className={`rounded-lg border px-3 py-2 text-xs font-medium ${
               isPointMode
                 ? "border-blue-700 bg-blue-50 text-blue-900"
-                : "border-slate-300 bg-white text-slate-700"
+                : neutralButtonClassName
             }`}
           >
             {translations.zoneCreateTypeRadius}
@@ -158,7 +194,7 @@ function ZoneCreationPanel({
             className={`rounded-lg border px-3 py-2 text-xs font-medium ${
               !isPointMode
                 ? "border-teal-700 bg-teal-50 text-teal-900"
-                : "border-slate-300 bg-white text-slate-700"
+                : neutralButtonClassName
             }`}
           >
             {translations.zoneCreateTypePolygon}
@@ -179,13 +215,13 @@ function ZoneCreationPanel({
               step={10}
               value={pointRadiusM}
               onChange={(event) => onRadiusChange(Number(event.target.value))}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-slate-600"
+              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${fieldClassName}`}
             />
-            <span className="mt-1 block text-xs text-slate-600">
+            <span className={`mt-1 block text-xs ${secondaryHintClassName}`}>
               {translations.zoneCreateRadiusHint}
             </span>
           </label>
-          <p className="mt-3 text-xs text-slate-700">
+          <p className={`mt-3 text-xs ${hintClassName}`}>
             {pointCenterReady
               ? translations.zoneCreatePointReady
               : translations.zoneCreatePointHint}
@@ -193,16 +229,16 @@ function ZoneCreationPanel({
         </>
       ) : (
         <>
-          <p className="mt-3 text-xs text-slate-700">
+          <p className={`mt-3 text-xs ${hintClassName}`}>
             {translations.zoneCreatePolygonHint}
           </p>
-          <p className="mt-1 text-xs font-medium text-slate-800">{polygonPointsLabel}</p>
+          <p className={`mt-1 text-xs font-medium ${hintClassName}`}>{polygonPointsLabel}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={onUndoPolygonPoint}
               disabled={shouldDisableUndo}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`rounded-lg border px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${neutralButtonClassName}`}
             >
               {translations.zoneCreateUndoPoint}
             </button>
@@ -210,7 +246,7 @@ function ZoneCreationPanel({
               type="button"
               onClick={onClearDraft}
               disabled={shouldDisableUndo}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`rounded-lg border px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${neutralButtonClassName}`}
             >
               {translations.zoneCreateClearDraft}
             </button>
@@ -219,12 +255,24 @@ function ZoneCreationPanel({
       )}
 
       {submitError ? (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+            isDarkMode
+              ? "bg-red-900/40 text-red-200"
+              : "bg-red-50 text-red-700"
+          }`}
+        >
           {submitError}
         </p>
       ) : null}
       {submitSuccess ? (
-        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+            isDarkMode
+              ? "bg-emerald-900/40 text-emerald-200"
+              : "bg-emerald-50 text-emerald-700"
+          }`}
+        >
           {submitSuccess}
         </p>
       ) : null}
@@ -232,7 +280,7 @@ function ZoneCreationPanel({
       <button
         type="submit"
         disabled={isSubmitDisabled}
-        className="mt-4 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`mt-4 w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${submitButtonClassName}`}
       >
         {isSubmitting
           ? translations.zoneCreateSubmitting
@@ -249,10 +297,14 @@ export default function LeafletMap({
   translations,
 }: LeafletMapProps) {
   const { isDarkMode, toggleTheme } = useMapTheme();
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const { zones, prependZone, scheduleZoneFetch, cancelScheduledZoneFetch } =
     useZonesByViewport();
   const { userPosition, locationStatus, requestUserLocation } = useUserLocation();
   const isAuthenticated = !initialUser.isAnonymous;
+  const isCreatePanelVisible = isAuthenticated && isCreateMode;
+  const effectiveCanCreateZone = isCreatePanelVisible && hasAcceptedTerms;
   const {
     drawMode,
     zoneName,
@@ -267,13 +319,32 @@ export default function LeafletMap({
     handleDrawModeChange,
     handleMapClick,
     clearGeometry,
+    resetCreationState,
     removeLastPolygonVertex,
     submit,
   } = useZoneCreation({
-    canCreate: isAuthenticated,
+    canCreate: effectiveCanCreateZone,
     translations,
     onZoneCreated: prependZone,
   });
+
+  const handleSetCreateMode = useCallback(
+    (nextValue: boolean) => {
+      setIsCreateMode(nextValue);
+      if (!nextValue) {
+        setHasAcceptedTerms(false);
+        resetCreationState();
+      }
+    },
+    [resetCreationState],
+  );
+
+  const handleAcceptedTermsChange = useCallback((checked: boolean) => {
+    setHasAcceptedTerms(checked);
+    if (!checked) {
+      clearGeometry();
+    }
+  }, [clearGeometry]);
 
   const tileUrl = isDarkMode ? MAP_TILE_STYLES.dark : MAP_TILE_STYLES.light;
   const toggleIcon = isDarkMode ? MAP_STYLE_ICON.dark : MAP_STYLE_ICON.light;
@@ -291,7 +362,9 @@ export default function LeafletMap({
     <div className="relative w-screen h-screen">
       <LocationNotice locationNotice={locationNotice} />
       <ZoneCreationPanel
-        isVisible={isAuthenticated}
+        isVisible={isCreatePanelVisible}
+        isDarkMode={isDarkMode}
+        hasAcceptedTerms={hasAcceptedTerms}
         zoneName={zoneName}
         drawMode={drawMode}
         pointRadiusM={pointRadiusM}
@@ -300,6 +373,7 @@ export default function LeafletMap({
         isSubmitting={isSubmitting}
         submitError={submitError}
         submitSuccess={submitSuccess}
+        onAcceptedTermsChange={handleAcceptedTermsChange}
         onNameChange={setZoneName}
         onModeChange={handleDrawModeChange}
         onRadiusChange={onPointRadiusChange}
@@ -313,6 +387,8 @@ export default function LeafletMap({
         <AuthAvatarMenu
           lang={lang}
           initialUser={initialUser}
+          isCreateMode={isCreateMode}
+          onSetCreateMode={handleSetCreateMode}
           translations={authTranslations}
         />
         <button
@@ -355,14 +431,14 @@ export default function LeafletMap({
           onViewportChanged={scheduleZoneFetch}
         />
         <ZoneCreationInteractionLayer
-          canCreate={isAuthenticated}
+          canCreate={effectiveCanCreateZone}
           onMapClick={handleMapClick}
         />
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
         <ZoneLayer zones={zones} translations={translations} />
         <ZoneCreationDraftLayer
-          canCreate={isAuthenticated}
+          canCreate={isCreatePanelVisible}
           drawMode={drawMode}
           pointCenter={pointCenter}
           pointRadiusM={pointRadiusM}

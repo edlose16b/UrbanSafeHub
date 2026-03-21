@@ -235,6 +235,16 @@ export function useZoneCreation({
     setPolygonVertices([]);
   }, []);
 
+  const resetCreationState = useCallback(() => {
+    setDrawMode("Point");
+    setZoneName("");
+    setPointRadiusM(150);
+    setPointCenter(null);
+    setPolygonVertices([]);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  }, []);
+
   const handleDrawModeChange = useCallback(
     (nextMode: DrawMode) => {
       setDrawMode(nextMode);
@@ -276,6 +286,10 @@ export function useZoneCreation({
 
   const submit = useCallback(async (): Promise<boolean> => {
     if (!canCreate || isSubmitting) {
+      if (!canCreate) {
+        setSubmitError(translations.zoneCreateTermsRequired);
+        setSubmitSuccess(null);
+      }
       return false;
     }
 
@@ -349,9 +363,9 @@ export function useZoneCreation({
         onZoneCreated(payload.zone);
       }
 
-      setZoneName("");
-      clearGeometry();
-      setSubmitSuccess(translations.zoneCreateSuccess);
+    setZoneName("");
+    clearGeometry();
+    setSubmitSuccess(translations.zoneCreateSuccess);
       return true;
     } catch {
       setSubmitError(translations.zoneCreateFailedFallback);
@@ -373,6 +387,7 @@ export function useZoneCreation({
     translations.zoneCreatePointRequired,
     translations.zoneCreatePolygonRequired,
     translations.zoneCreateSuccess,
+    translations.zoneCreateTermsRequired,
     zoneName,
   ]);
 
@@ -390,6 +405,7 @@ export function useZoneCreation({
     handleDrawModeChange,
     handleMapClick,
     clearGeometry,
+    resetCreationState,
     removeLastPolygonVertex,
     submit,
   };

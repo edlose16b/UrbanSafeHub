@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GetCurrentUserUseCase } from "@/lib/auth/application/get-current-user";
@@ -15,20 +14,24 @@ export type AuthMenuTranslations = {
   anonymousLabel: string;
   openMenu: string;
   signInWithGoogle: string;
-  contributions: string;
-  contributionsComingSoon: string;
+  createZone: string;
+  exitCreateZone: string;
   signOut: string;
 };
 
 type AuthAvatarMenuProps = {
   lang: string;
   initialUser: AuthUserSnapshot;
+  isCreateMode: boolean;
+  onSetCreateMode: (nextValue: boolean) => void;
   translations: AuthMenuTranslations;
 };
 
 export default function AuthAvatarMenu({
   lang,
   initialUser,
+  isCreateMode,
+  onSetCreateMode,
   translations,
 }: AuthAvatarMenuProps) {
   const router = useRouter();
@@ -104,6 +107,7 @@ export default function AuthAvatarMenu({
         avatarUrl: null,
         isAnonymous: true,
       });
+      onSetCreateMode(false);
       setIsOpen(false);
       router.refresh();
     } finally {
@@ -150,14 +154,18 @@ export default function AuthAvatarMenu({
             </button>
           ) : (
             <>
-              <Link
-                href={`/${lang}/contributions`}
-                className="block w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-black/5"
-                title={translations.contributionsComingSoon}
-                onClick={() => setIsOpen(false)}
+              <button
+                type="button"
+                onClick={() => {
+                  onSetCreateMode(!isCreateMode);
+                  setIsOpen(false);
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-black/5"
               >
-                {translations.contributions}
-              </Link>
+                {isCreateMode
+                  ? translations.exitCreateZone
+                  : translations.createZone}
+              </button>
               <button
                 type="button"
                 onClick={handleSignOut}

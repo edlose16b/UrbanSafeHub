@@ -23,10 +23,10 @@ export default async function ContributionsPage({
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6 py-16 text-center">
       <section className="max-w-md rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-neutral-900">
-          {dictionary.auth.contributions}
+          {dictionary.metadata.title}
         </h1>
         <p className="mt-3 text-neutral-600">
-          {dictionary.auth.contributionsComingSoon}
+          {dictionary.metadata.description}
         </p>
       </section>
     </main>

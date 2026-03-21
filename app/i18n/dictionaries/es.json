@@ -11,7 +11,12 @@
     "locateUserTitle": "Ubicarme",
     "locationDeniedMessage": "No diste permiso de ubicación. Mostramos el mapa centrado en Lima.",
     "locationUnavailableMessage": "No se pudo obtener tu ubicación actual. Mostramos el mapa centrado en Lima.",
-    "userLocationLabel": "Tu ubicación"
+    "userLocationLabel": "Tu ubicación",
+    "crimeLegendTitle": "Delincuencia",
+    "crimeLegendLow": "Baja",
+    "crimeLegendHigh": "Alta",
+    "crimeTooltipNoData": "Sin datos de delincuencia",
+    "crimeTooltipLevel": "Delincuencia"
   },
   "auth": {
     "anonymousLabel": "A",

@@ -17,4 +17,5 @@ For Supabase MCP use
 
 ## Rules
 
+- All words should use i18n
 - do not use svg directly, create on `public/icons` first

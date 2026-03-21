@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   Circle,
   CircleMarker,
@@ -76,6 +76,15 @@ function getCrimeHeatColor(crimeLevel: number | null): string {
   const blue = Math.round(68 * ratio + 94 * (1 - ratio));
 
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
+
+function getCrimeHeatIntensity(crimeLevel: number | null): number {
+  if (crimeLevel === null) {
+    return 0.45;
+  }
+
+  const normalized = Math.max(1, Math.min(5, crimeLevel));
+  return 0.35 + ((normalized - 1) / 4) * 0.65;
 }
 
 function RecenterOnUserPosition({
@@ -303,6 +312,15 @@ export default function LeafletMap({
           <Image src={LOCATE_USER_ICON} alt="" width={20} height={20} aria-hidden />
         </button>
       </div>
+      <div className="absolute left-4 bottom-8 z-[1000] rounded-md border border-black/10 bg-white/95 px-3 py-2 text-xs text-slate-800 shadow-md">
+        <div className="mb-1 font-medium">{translations.crimeLegendTitle}</div>
+        <div className="flex items-center gap-2">
+          <span className="inline-block h-2 w-6 rounded bg-[#22c55e]" />
+          <span>{translations.crimeLegendLow}</span>
+          <span className="inline-block h-2 w-6 rounded bg-[#e11d48]" />
+          <span>{translations.crimeLegendHigh}</span>
+        </div>
+      </div>
 
       <MapContainer
         center={LIMA_CENTER}
@@ -315,30 +333,69 @@ export default function LeafletMap({
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
         {zones.map((zone) => {
           const heatColor = getCrimeHeatColor(zone.crimeLevel);
+          const heatIntensity = getCrimeHeatIntensity(zone.crimeLevel);
 
           if (zone.geometry.type === "Point") {
             const [longitude, latitude] = zone.geometry.coordinates;
+            const pointCenter: [number, number] = [latitude, longitude];
             const crimeTooltip =
               zone.crimeLevel === null
-                ? `${zone.name} • Sin datos de delincuencia`
-                : `${zone.name} • Delincuencia ${zone.crimeLevel.toFixed(2)}/5`;
+                ? `${zone.name} • ${translations.crimeTooltipNoData}`
+                : `${zone.name} • ${translations.crimeTooltipLevel} ${zone.crimeLevel.toFixed(2)}/5`;
+            const radiusM = zone.geometry.radiusM;
+            const outerRadiusM = Math.round(radiusM * 1.6);
+            const coreRadiusM = Math.max(18, Math.round(radiusM * 0.2));
 
             return (
-              <Circle
-                key={zone.id}
-                center={[latitude, longitude]}
-                radius={zone.geometry.radiusM}
-                pathOptions={{
-                  color: "#0f172a",
-                  fillColor: heatColor,
-                  fillOpacity: 0.28,
-                  weight: 1.5,
-                }}
-              >
-                <Tooltip direction="top" offset={[0, -8]}>
-                  {crimeTooltip}
-                </Tooltip>
-              </Circle>
+              <Fragment key={zone.id}>
+                <Circle
+                  key={`${zone.id}-outer`}
+                  center={pointCenter}
+                  radius={outerRadiusM}
+                  interactive={false}
+                  pathOptions={{
+                    stroke: false,
+                    fillColor: heatColor,
+                    fillOpacity: 0.07 * heatIntensity,
+                  }}
+                />
+                <Circle
+                  key={`${zone.id}-mid`}
+                  center={pointCenter}
+                  radius={radiusM}
+                  pathOptions={{
+                    stroke: false,
+                    fillColor: heatColor,
+                    fillOpacity: 0.2 * heatIntensity,
+                  }}
+                >
+                  <Tooltip direction="top" offset={[0, -8]}>
+                    {crimeTooltip}
+                  </Tooltip>
+                </Circle>
+                <Circle
+                  key={`${zone.id}-core`}
+                  center={pointCenter}
+                  radius={coreRadiusM}
+                  interactive={false}
+                  pathOptions={{
+                    stroke: false,
+                    fillColor: heatColor,
+                    fillOpacity: 0.45 * heatIntensity,
+                  }}
+                />
+                <CircleMarker
+                  key={`${zone.id}-hotspot`}
+                  center={pointCenter}
+                  radius={4}
+                  pathOptions={{
+                    color: "#ffffff",
+                    fillColor: heatColor,
+                    fillOpacity: 0.95,
+                    weight: 1.5,
+                  }}
+                />
+              </Fragment>
             );
           }
 
@@ -360,8 +417,8 @@ export default function LeafletMap({
             >
               <Tooltip sticky>
                 {zone.crimeLevel === null
-                  ? `${zone.name} • Sin datos de delincuencia`
-                  : `${zone.name} • Delincuencia ${zone.crimeLevel.toFixed(2)}/5`}
+                  ? `${zone.name} • ${translations.crimeTooltipNoData}`
+                  : `${zone.name} • ${translations.crimeTooltipLevel} ${zone.crimeLevel.toFixed(2)}/5`}
               </Tooltip>
             </Polygon>
           );

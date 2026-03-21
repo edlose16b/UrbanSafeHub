@@ -11,7 +11,12 @@
     "locateUserTitle": "Locate me",
     "locationDeniedMessage": "Location access was denied. The map stays centered on Lima.",
     "locationUnavailableMessage": "We could not get your current location. The map stays centered on Lima.",
-    "userLocationLabel": "Your location"
+    "userLocationLabel": "Your location",
+    "crimeLegendTitle": "Crime Level",
+    "crimeLegendLow": "Low",
+    "crimeLegendHigh": "High",
+    "crimeTooltipNoData": "No crime data",
+    "crimeTooltipLevel": "Crime"
   },
   "auth": {
     "anonymousLabel": "A",

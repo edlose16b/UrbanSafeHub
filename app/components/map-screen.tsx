@@ -13,6 +13,11 @@ export type MapTranslations = {
   locationDeniedMessage: string;
   locationUnavailableMessage: string;
   userLocationLabel: string;
+  crimeLegendTitle: string;
+  crimeLegendLow: string;
+  crimeLegendHigh: string;
+  crimeTooltipNoData: string;
+  crimeTooltipLevel: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

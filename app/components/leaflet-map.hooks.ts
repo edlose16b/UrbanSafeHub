@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { MapTranslations } from "./map-screen";
 import type {
@@ -10,7 +11,6 @@ import type {
 import {
   shouldFetchViewport,
   getInitialLocationStatus,
-  getSystemPrefersDarkMode,
 } from "./leaflet-map.utils";
 
 const VIEWPORT_FETCH_DEBOUNCE_MS = 350;
@@ -36,11 +36,12 @@ function resolveLocationStatus(error: GeolocationPositionError): LocationStatus 
 }
 
 export function useMapTheme() {
-  const [isDarkMode, setIsDarkMode] = useState(getSystemPrefersDarkMode);
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
 
   const toggleTheme = useCallback(() => {
-    setIsDarkMode((current) => !current);
-  }, []);
+    setTheme(isDarkMode ? "light" : "dark");
+  }, [isDarkMode, setTheme]);
 
   return {
     isDarkMode,

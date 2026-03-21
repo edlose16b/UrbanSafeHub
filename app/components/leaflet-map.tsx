@@ -38,7 +38,7 @@ function LocationNotice({
   }
 
   return (
-    <p className="absolute top-4 left-4 z-[1000] max-w-80 rounded-md bg-black/75 px-3 py-2 text-sm text-white shadow-md">
+    <p className="absolute top-4 left-4 z-[1000] max-w-80 rounded-md bg-overlay px-3 py-2 text-sm text-white shadow-md">
       {locationNotice}
     </p>
   );
@@ -54,7 +54,7 @@ function CrimeLegend({
   high: string;
 }) {
   return (
-    <div className="absolute left-4 bottom-8 z-[1000] rounded-md border border-black/10 bg-white/95 px-3 py-2 text-xs text-slate-800 shadow-md">
+    <div className="absolute left-4 bottom-8 z-[1000] rounded-md border border-border bg-surface px-3 py-2 text-xs text-foreground shadow-md">
       <div className="mb-1 font-medium">{title}</div>
       <div className="flex items-center gap-2">
         <span className="inline-block h-2 w-6 rounded bg-[#22c55e]" />
@@ -68,7 +68,6 @@ function CrimeLegend({
 
 type ZoneCreationPanelProps = {
   isVisible: boolean;
-  isDarkMode: boolean;
   hasAcceptedTerms: boolean;
   zoneName: string;
   drawMode: "Point" | "Polygon";
@@ -90,7 +89,6 @@ type ZoneCreationPanelProps = {
 
 function ZoneCreationPanel({
   isVisible,
-  isDarkMode,
   hasAcceptedTerms,
   zoneName,
   drawMode,
@@ -120,34 +118,17 @@ function ZoneCreationPanel({
   const shouldDisableUndo = polygonVertexCount === 0;
   const isPointMode = drawMode === "Point";
   const isSubmitDisabled = isSubmitting || !zoneName.trim() || !hasAcceptedTerms;
-  const surfaceClassName = isDarkMode
-    ? "border-white/20 bg-slate-900/95 text-slate-100"
-    : "border-black/15 bg-white/95 text-slate-900";
-  const fieldClassName = isDarkMode
-    ? "border-slate-700 bg-slate-950 text-slate-100 focus:border-slate-300"
-    : "border-slate-300 bg-white text-slate-900 focus:border-slate-600";
-  const hintClassName = isDarkMode ? "text-slate-300" : "text-slate-700";
-  const secondaryHintClassName = isDarkMode ? "text-slate-400" : "text-slate-600";
-  const neutralButtonClassName = isDarkMode
-    ? "border-slate-700 bg-slate-950 text-slate-200"
-    : "border-slate-300 bg-white text-slate-700";
-  const submitButtonClassName = isDarkMode
-    ? "bg-white text-slate-900 hover:bg-slate-200"
-    : "bg-slate-900 text-white hover:bg-slate-700";
-  const termsAlertClassName = isDarkMode
-    ? "border-amber-500/40 bg-amber-900/30 text-amber-100"
-    : "border-amber-300 bg-amber-50 text-amber-900";
 
   return (
     <form
-      className={`absolute top-4 left-4 z-[1000] w-80 rounded-xl border p-4 text-sm shadow-md backdrop-blur-[1px] ${surfaceClassName}`}
+      className="absolute top-4 left-4 z-[1000] w-80 rounded-xl border border-border bg-surface p-4 text-sm text-foreground shadow-md backdrop-blur-[1px]"
       onSubmit={(event) => {
         event.preventDefault();
         void onSubmit();
       }}
     >
       <h2 className="text-sm font-semibold">{translations.zoneCreatePanelTitle}</h2>
-      <div className={`mt-3 rounded-lg border px-3 py-2 text-xs ${termsAlertClassName}`}>
+      <div className="mt-3 rounded-lg border border-warning-border bg-warning px-3 py-2 text-xs text-warning-foreground">
         <p>{translations.zoneCreateTermsAlert}</p>
         <label className="mt-2 flex cursor-pointer items-start gap-2">
           <input
@@ -169,7 +150,7 @@ function ZoneCreationPanel({
           value={zoneName}
           onChange={(event) => onNameChange(event.target.value)}
           placeholder={translations.zoneCreateNamePlaceholder}
-          className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${fieldClassName}`}
+          className="w-full rounded-lg border border-border-muted bg-input px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-border"
           maxLength={120}
         />
       </label>
@@ -183,7 +164,7 @@ function ZoneCreationPanel({
             className={`rounded-lg border px-3 py-2 text-xs font-medium ${
               isPointMode
                 ? "border-blue-700 bg-blue-50 text-blue-900"
-                : neutralButtonClassName
+                : "border-border-muted bg-surface-muted text-text-muted"
             }`}
           >
             {translations.zoneCreateTypeRadius}
@@ -194,7 +175,7 @@ function ZoneCreationPanel({
             className={`rounded-lg border px-3 py-2 text-xs font-medium ${
               !isPointMode
                 ? "border-teal-700 bg-teal-50 text-teal-900"
-                : neutralButtonClassName
+                : "border-border-muted bg-surface-muted text-text-muted"
             }`}
           >
             {translations.zoneCreateTypePolygon}
@@ -215,13 +196,13 @@ function ZoneCreationPanel({
               step={10}
               value={pointRadiusM}
               onChange={(event) => onRadiusChange(Number(event.target.value))}
-              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${fieldClassName}`}
+              className="w-full rounded-lg border border-border-muted bg-input px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-border"
             />
-            <span className={`mt-1 block text-xs ${secondaryHintClassName}`}>
+            <span className="mt-1 block text-xs text-text-secondary">
               {translations.zoneCreateRadiusHint}
             </span>
           </label>
-          <p className={`mt-3 text-xs ${hintClassName}`}>
+          <p className="mt-3 text-xs text-text-muted">
             {pointCenterReady
               ? translations.zoneCreatePointReady
               : translations.zoneCreatePointHint}
@@ -229,16 +210,16 @@ function ZoneCreationPanel({
         </>
       ) : (
         <>
-          <p className={`mt-3 text-xs ${hintClassName}`}>
+          <p className="mt-3 text-xs text-text-muted">
             {translations.zoneCreatePolygonHint}
           </p>
-          <p className={`mt-1 text-xs font-medium ${hintClassName}`}>{polygonPointsLabel}</p>
+          <p className="mt-1 text-xs font-medium text-text-muted">{polygonPointsLabel}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={onUndoPolygonPoint}
               disabled={shouldDisableUndo}
-              className={`rounded-lg border px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${neutralButtonClassName}`}
+              className="rounded-lg border border-border-muted bg-surface-muted px-3 py-2 text-xs font-medium text-text-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
               {translations.zoneCreateUndoPoint}
             </button>
@@ -246,7 +227,7 @@ function ZoneCreationPanel({
               type="button"
               onClick={onClearDraft}
               disabled={shouldDisableUndo}
-              className={`rounded-lg border px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${neutralButtonClassName}`}
+              className="rounded-lg border border-border-muted bg-surface-muted px-3 py-2 text-xs font-medium text-text-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
               {translations.zoneCreateClearDraft}
             </button>
@@ -255,24 +236,12 @@ function ZoneCreationPanel({
       )}
 
       {submitError ? (
-        <p
-          className={`mt-3 rounded-lg px-3 py-2 text-xs ${
-            isDarkMode
-              ? "bg-red-900/40 text-red-200"
-              : "bg-red-50 text-red-700"
-          }`}
-        >
+        <p className="mt-3 rounded-lg bg-danger px-3 py-2 text-xs text-danger-foreground">
           {submitError}
         </p>
       ) : null}
       {submitSuccess ? (
-        <p
-          className={`mt-3 rounded-lg px-3 py-2 text-xs ${
-            isDarkMode
-              ? "bg-emerald-900/40 text-emerald-200"
-              : "bg-emerald-50 text-emerald-700"
-          }`}
-        >
+        <p className="mt-3 rounded-lg bg-success px-3 py-2 text-xs text-success-foreground">
           {submitSuccess}
         </p>
       ) : null}
@@ -280,7 +249,7 @@ function ZoneCreationPanel({
       <button
         type="submit"
         disabled={isSubmitDisabled}
-        className={`mt-4 w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${submitButtonClassName}`}
+        className="mt-4 w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting
           ? translations.zoneCreateSubmitting
@@ -363,7 +332,6 @@ export default function LeafletMap({
       <LocationNotice locationNotice={locationNotice} />
       <ZoneCreationPanel
         isVisible={isCreatePanelVisible}
-        isDarkMode={isDarkMode}
         hasAcceptedTerms={hasAcceptedTerms}
         zoneName={zoneName}
         drawMode={drawMode}
@@ -394,7 +362,7 @@ export default function LeafletMap({
         <button
           type="button"
           onClick={toggleTheme}
-          className="rounded-full border border-black/20 bg-white/95 p-2 text-black shadow-md transition-colors hover:bg-white"
+          className="rounded-full border border-border bg-surface p-2 text-foreground shadow-md transition-colors hover:bg-surface-solid"
           aria-label={themeAriaLabel}
           title={isDarkMode ? translations.lightModeTitle : translations.darkModeTitle}
         >
@@ -406,7 +374,7 @@ export default function LeafletMap({
         <button
           type="button"
           onClick={requestUserLocation}
-          className="grid h-11 w-11 place-items-center rounded-full border border-black/20 bg-white/95 text-black shadow-md transition-colors hover:bg-white"
+          className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface text-foreground shadow-md transition-colors hover:bg-surface-solid"
           aria-label={translations.locateUserTitle}
           title={translations.locateUserTitle}
         >

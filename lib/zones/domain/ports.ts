@@ -1,4 +1,5 @@
 import type { ZoneGeometry, ZoneSnapshot } from "./zone";
+import type { ZoneDetailSnapshot } from "./zone-detail";
 
 export type CreateZoneRecord = {
   name: string;
@@ -14,6 +15,7 @@ export type ListVisibleNearCenterQuery = {
 
 export interface ZoneQueryRepository {
   listVisibleNearCenter(query: ListVisibleNearCenterQuery): Promise<ZoneSnapshot[]>;
+  getVisibleDetailById(zoneId: string): Promise<ZoneDetailSnapshot | null>;
 }
 
 export interface ZoneCommandRepository {

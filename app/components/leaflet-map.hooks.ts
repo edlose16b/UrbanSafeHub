@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
+import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { zoneGeometriesTouchOrIntersect } from "@/lib/zones/domain/geometry-overlap";
 import type { ZoneGeometry } from "@/lib/zones/domain/zone";
 import type { MapTranslations } from "./map-screen";
@@ -306,7 +307,7 @@ export function useZoneCreation({
   const notifyOverlapError = useCallback(() => {
     setSubmitError(translations.zoneCreateOverlapError);
     setSubmitSuccess(null);
-  }, []);
+  }, [translations.zoneCreateOverlapError]);
 
   const submit = useCallback(async (): Promise<boolean> => {
     if (!canCreate || isSubmitting) {
@@ -427,7 +428,6 @@ export function useZoneCreation({
     polygonVertices,
     translations.zoneCreateFailedFallback,
     translations.zoneCreateNameRequired,
-    translations.zoneCreateOverlapError,
     translations.zoneCreatePointRequired,
     translations.zoneCreatePolygonRequired,
     translations.zoneCreateSuccess,
@@ -453,5 +453,85 @@ export function useZoneCreation({
     resetCreationState,
     removeLastPolygonVertex,
     submit,
+  };
+}
+
+type ZoneDetailHookOptions = {
+  detailFetchFailedFallback: string;
+};
+
+export function useSelectedZoneDetail({
+  detailFetchFailedFallback,
+}: ZoneDetailHookOptions) {
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [selectedZoneDetail, setSelectedZoneDetail] = useState<ZoneDetailDTO | null>(
+    null,
+  );
+  const [isZoneDetailLoading, setIsZoneDetailLoading] = useState(false);
+  const [zoneDetailError, setZoneDetailError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedZoneId) {
+      setSelectedZoneDetail(null);
+      setIsZoneDetailLoading(false);
+      setZoneDetailError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsZoneDetailLoading(true);
+    setZoneDetailError(null);
+    setSelectedZoneDetail(null);
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/zones/${selectedZoneId}`, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as {
+          detail?: ZoneDetailDTO;
+          error?: string;
+        };
+
+        if (!response.ok) {
+          setZoneDetailError(payload.error ?? detailFetchFailedFallback);
+          setSelectedZoneDetail(null);
+          return;
+        }
+
+        setSelectedZoneDetail(payload.detail ?? null);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        setZoneDetailError(detailFetchFailedFallback);
+      } finally {
+        setIsZoneDetailLoading(false);
+      }
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }, [detailFetchFailedFallback, selectedZoneId]);
+
+  const selectZone = useCallback((zoneId: string) => {
+    setSelectedZoneId(zoneId);
+  }, []);
+
+  const clearSelectedZone = useCallback(() => {
+    setSelectedZoneId(null);
+  }, []);
+
+  return {
+    selectedZoneId,
+    selectedZoneDetail,
+    isZoneDetailLoading,
+    zoneDetailError,
+    selectZone,
+    clearSelectedZone,
   };
 }

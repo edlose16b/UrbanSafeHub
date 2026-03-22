@@ -43,6 +43,32 @@ export type MapTranslations = {
   zoneCreateTermsAlert: string;
   zoneCreateTermsCheckbox: string;
   zoneCreateTermsRequired: string;
+  zoneDetailLoading: string;
+  zoneDetailClose: string;
+  zoneDetailErrorFallback: string;
+  zoneDetailTitle: string;
+  zoneDetailTypeLabel: string;
+  zoneDetailTypePoint: string;
+  zoneDetailTypePolygon: string;
+  zoneDetailRadiusLabel: string;
+  zoneDetailVerticesLabel: string;
+  zoneDetailCreatedByLabel: string;
+  zoneDetailCreatedAtLabel: string;
+  zoneDetailCrimeLabel: string;
+  zoneDetailNoCrimeData: string;
+  zoneDetailRatingsTitle: string;
+  zoneDetailCommentsTitle: string;
+  zoneDetailNoComments: string;
+  zoneDetailNoData: string;
+  zoneDetailCategoryLabel: string;
+  zoneDetailCategoryCrime: string;
+  zoneDetailCategoryLighting: string;
+  zoneDetailCategoryFootTraffic: string;
+  zoneDetailSegmentMorning: string;
+  zoneDetailSegmentAfternoon: string;
+  zoneDetailSegmentNight: string;
+  zoneDetailSegmentEarlyMorning: string;
+  zoneDetailSegmentGeneral: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

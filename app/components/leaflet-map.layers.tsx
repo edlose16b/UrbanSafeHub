@@ -183,6 +183,7 @@ export function ZoneCreationDraftLayer({
 type ZoneLayerProps = {
   zones: ZoneDTO[];
   translations: MapTranslations;
+  onZoneSelect?: (zoneId: string) => void;
 };
 
 type PointZoneDTO = ZoneDTO & {
@@ -214,11 +215,13 @@ function PointZone({
   heatColor,
   heatIntensity,
   translations,
+  onZoneSelect,
 }: {
   zone: PointZoneDTO;
   heatColor: string;
   heatIntensity: number;
   translations: MapTranslations;
+  onZoneSelect?: (zoneId: string) => void;
 }) {
   const [longitude, latitude] = zone.geometry.coordinates;
   const center: Position = [latitude, longitude];
@@ -244,6 +247,15 @@ function PointZone({
         key={`${zone.id}-mid`}
         center={center}
         radius={radiusM}
+        eventHandlers={
+          onZoneSelect
+            ? {
+                click() {
+                  onZoneSelect(zone.id);
+                },
+              }
+            : undefined
+        }
         pathOptions={{
           stroke: false,
           fillColor: heatColor,
@@ -284,10 +296,12 @@ function PolygonZone({
   zone,
   heatColor,
   translations,
+  onZoneSelect,
 }: {
   zone: PolygonZoneDTO;
   heatColor: string;
   translations: MapTranslations;
+  onZoneSelect?: (zoneId: string) => void;
 }) {
   const outerRing = zone.geometry.coordinates[0];
   const positions: Position[] = outerRing.map(([longitude, latitude]) => [
@@ -305,13 +319,22 @@ function PolygonZone({
         fillOpacity: 0.35,
         weight: 1.5,
       }}
+      eventHandlers={
+        onZoneSelect
+          ? {
+              click() {
+                onZoneSelect(zone.id);
+              },
+            }
+          : undefined
+      }
     >
       <Tooltip sticky>{getCrimeTooltipText(zone, translations)}</Tooltip>
     </Polygon>
   );
 }
 
-export function ZoneLayer({ zones, translations }: ZoneLayerProps) {
+export function ZoneLayer({ zones, translations, onZoneSelect }: ZoneLayerProps) {
   return (
     <>
       {zones.map((zone) => {
@@ -326,6 +349,7 @@ export function ZoneLayer({ zones, translations }: ZoneLayerProps) {
               heatColor={heatColor}
               heatIntensity={heatIntensity}
               translations={translations}
+              onZoneSelect={onZoneSelect}
             />
           );
         }
@@ -340,6 +364,7 @@ export function ZoneLayer({ zones, translations }: ZoneLayerProps) {
             zone={zone}
             heatColor={heatColor}
             translations={translations}
+            onZoneSelect={onZoneSelect}
           />
         );
       })}

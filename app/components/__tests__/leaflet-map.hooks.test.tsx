@@ -1,10 +1,20 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import type { ViewportQuery } from "../leaflet-map.types";
-import { useZonesByViewport } from "../leaflet-map.hooks";
+import { useSelectedZoneDetail, useZonesByViewport } from "../leaflet-map.hooks";
 
 function createZonesResponse() {
   return new Response(JSON.stringify({ zones: [] }), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+function createZoneDetailResponse(detail: ZoneDetailDTO) {
+  return new Response(JSON.stringify({ detail }), {
     status: 200,
     headers: {
       "Content-Type": "application/json",
@@ -166,4 +176,76 @@ describe("useZonesByViewport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(0);
   });
 
+});
+
+describe("useSelectedZoneDetail", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("loads selected zone details and exposes them in state", async () => {
+    const detail: ZoneDetailDTO = {
+      zone: {
+        id: "zone-1",
+        name: "Zona 1",
+        geometry: {
+          type: "Point",
+          coordinates: [-77.0428, -12.0464],
+          radiusM: 150,
+        },
+        crimeLevel: 3.5,
+        createdBy: "user-1",
+        createdAt: "2026-03-20T10:00:00.000Z",
+      },
+      aggregates: [],
+      comments: [],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(createZoneDetailResponse(detail));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useSelectedZoneDetail({
+        detailFetchFailedFallback: "fallback",
+      }),
+    );
+
+    await act(async () => {
+      result.current.selectZone("zone-1");
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/zones/zone-1", {
+      method: "GET",
+      cache: "no-store",
+      signal: expect.any(AbortSignal),
+    });
+    expect(result.current.selectedZoneDetail?.zone.id).toBe("zone-1");
+    expect(result.current.zoneDetailError).toBeNull();
+  });
+
+  it("stores translated fallback error when request fails", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useSelectedZoneDetail({
+        detailFetchFailedFallback: "No se pudo cargar.",
+      }),
+    );
+
+    await act(async () => {
+      result.current.selectZone("zone-2");
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.zoneDetailError).toBe("No se pudo cargar.");
+    expect(result.current.selectedZoneDetail).toBeNull();
+  });
 });

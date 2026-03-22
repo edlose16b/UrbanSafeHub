@@ -5,6 +5,12 @@ import type {
   ZoneQueryRepository,
 } from "../domain/ports";
 import type {
+  TimeSegment,
+  ZoneCommentSnapshot,
+  ZoneDetailSnapshot,
+  ZoneRatingAggregateSnapshot,
+} from "../domain/zone-detail";
+import type {
   GeoJsonPosition,
   ZoneGeometry,
   ZoneSnapshot,
@@ -29,6 +35,20 @@ type ZoneCrimeAggregateRow = {
   zone_id: string;
   ratings_count: number;
   avg_score: number | null;
+};
+
+type ZoneAggregateRow = {
+  category_slug: string;
+  time_segment: TimeSegment | null;
+  ratings_count: number;
+  avg_score: number | null;
+};
+
+type ZoneCommentRow = {
+  id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
 };
 
 function isPosition(value: unknown): value is GeoJsonPosition {
@@ -122,6 +142,44 @@ function toSnapshot(row: ZoneRow, crimeLevel: number | null): ZoneSnapshot {
     geometry: parseGeometry(row.geom, row.radius_m),
     crimeLevel,
     createdBy: row.created_by,
+    createdAt: row.created_at,
+  };
+}
+
+function parseNullableScore(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (isFiniteNumber(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function toAggregateSnapshot(row: ZoneAggregateRow): ZoneRatingAggregateSnapshot {
+  return {
+    categorySlug: row.category_slug,
+    timeSegment: row.time_segment,
+    ratingsCount:
+      isFiniteNumber(row.ratings_count) && row.ratings_count > 0
+        ? Math.round(row.ratings_count)
+        : 0,
+    avgScore: parseNullableScore(row.avg_score),
+  };
+}
+
+function toCommentSnapshot(row: ZoneCommentRow): ZoneCommentSnapshot {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    body: row.body,
     createdAt: row.created_at,
   };
 }
@@ -307,6 +365,87 @@ export class SupabaseZoneRepository
     return zones.filter((zone) =>
       isZoneWithinRadius(zone, center, query.radiusKm),
     );
+  }
+
+  async getVisibleDetailById(zoneId: string): Promise<ZoneDetailSnapshot | null> {
+    const { data: zoneData, error: zoneError } = await this.supabase
+      .from("zones")
+      .select("id, name, geom, radius_m, created_by, created_at")
+      .eq("id", zoneId)
+      .eq("visibility", "active")
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (zoneError) {
+      throw new Error(`Unable to load zone detail: ${zoneError.message}`);
+    }
+
+    if (!zoneData) {
+      return null;
+    }
+
+    const zoneRow = zoneData as ZoneRow;
+    const { data: crimeAggregateData, error: crimeAggregateError } = await this.supabase
+      .from("zone_rating_aggregates")
+      .select("avg_score")
+      .eq("zone_id", zoneId)
+      .eq("category_slug", "crime");
+
+    if (crimeAggregateError) {
+      throw new Error(
+        `Unable to load zone crime aggregate: ${crimeAggregateError.message}`,
+      );
+    }
+
+    let crimeLevel: number | null = null;
+    const crimeScores = (crimeAggregateData ?? [])
+      .map((row) => parseNullableScore((row as { avg_score: unknown }).avg_score))
+      .filter((score): score is number => score !== null);
+
+    if (crimeScores.length > 0) {
+      const averageCrimeScore = crimeScores.reduce((sum, score) => sum + score, 0) / crimeScores.length;
+      crimeLevel = Math.max(1, Math.min(5, averageCrimeScore));
+    }
+
+    const zone = toSnapshot(zoneRow, crimeLevel);
+
+    const { data: aggregateData, error: aggregateError } = await this.supabase
+      .from("zone_rating_aggregates")
+      .select("category_slug, time_segment, ratings_count, avg_score")
+      .eq("zone_id", zoneId)
+      .order("category_slug", { ascending: true })
+      .order("time_segment", { ascending: true, nullsFirst: true });
+
+    if (aggregateError) {
+      throw new Error(`Unable to load zone aggregates: ${aggregateError.message}`);
+    }
+
+    const aggregates = ((aggregateData ?? []) as ZoneAggregateRow[]).map(
+      toAggregateSnapshot,
+    );
+
+    const { data: commentData, error: commentError } = await this.supabase
+      .from("zone_comments")
+      .select("id, user_id, body, created_at")
+      .eq("zone_id", zoneId)
+      .eq("visibility", "visible")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (commentError) {
+      throw new Error(`Unable to load zone comments: ${commentError.message}`);
+    }
+
+    const comments = ((commentData ?? []) as ZoneCommentRow[]).map(
+      toCommentSnapshot,
+    );
+
+    return {
+      zone,
+      aggregates,
+      comments,
+    };
   }
 
   async create(record: {

@@ -29,6 +29,7 @@ export type MapTranslations = {
   zoneCreatePointHint: string;
   zoneCreatePointReady: string;
   zoneCreatePolygonHint: string;
+  zoneCreatePolygonDiameterExceeded: string;
   zoneCreatePolygonPoints: string;
   zoneCreateUndoPoint: string;
   zoneCreateClearDraft: string;

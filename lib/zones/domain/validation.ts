@@ -4,12 +4,15 @@ import {
   type GeoJsonPosition,
   type ZoneGeometry,
 } from "./zone";
+import {
+  MAX_POLYGON_DIAMETER_M,
+  POINT_RADIUS_OPTIONS_M,
+} from "@/app/constants/map";
+import { isPolygonRingWithinMaxDiameter } from "./geo-distance";
 import { isFiniteNumber } from "../utils/number";
 
 const MIN_ZONE_NAME_LENGTH = 2;
 const MAX_ZONE_NAME_LENGTH = 120;
-const MIN_POINT_RADIUS_M = 10;
-const MAX_POINT_RADIUS_M = 2000;
 
 export class ZoneValidationError extends Error {
   constructor(message: string) {
@@ -22,6 +25,13 @@ export class ZoneGeometryConflictError extends ZoneValidationError {
   constructor(message: string) {
     super(message);
     this.name = "ZoneGeometryConflictError";
+  }
+}
+
+export class ZonePolygonDiameterExceededError extends ZoneValidationError {
+  constructor(public readonly maxMeters: number) {
+    super(`Polygon diameter exceeds ${maxMeters} m.`);
+    this.name = "ZonePolygonDiameterExceededError";
   }
 }
 
@@ -61,9 +71,12 @@ function parsePointRadiusM(raw: unknown): number {
     throw new ZoneValidationError("Point radiusM must be a number.");
   }
 
-  if (raw < MIN_POINT_RADIUS_M || raw > MAX_POINT_RADIUS_M) {
+  const minRadiusM = POINT_RADIUS_OPTIONS_M[0];
+  const maxRadiusM = POINT_RADIUS_OPTIONS_M[POINT_RADIUS_OPTIONS_M.length - 1];
+
+  if (raw < minRadiusM || raw > maxRadiusM) {
     throw new ZoneValidationError(
-      `Point radiusM must be between ${MIN_POINT_RADIUS_M} and ${MAX_POINT_RADIUS_M}.`,
+      `Point radiusM must be between ${minRadiusM} and ${maxRadiusM}.`,
     );
   }
 
@@ -153,6 +166,11 @@ export function parseZoneGeometry(value: unknown): ZoneGeometry {
 
   if (candidate.type === "Polygon") {
     const coordinates = parsePolygonCoordinates(candidate.coordinates);
+    for (const ring of coordinates) {
+      if (!isPolygonRingWithinMaxDiameter(ring, MAX_POLYGON_DIAMETER_M)) {
+        throw new ZonePolygonDiameterExceededError(MAX_POLYGON_DIAMETER_M);
+      }
+    }
     const polygon: GeoJsonPolygon = {
       type: "Polygon",
       coordinates,

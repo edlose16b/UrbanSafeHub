@@ -3,7 +3,13 @@ import { useTheme } from "next-themes";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { zoneGeometriesTouchOrIntersect } from "@/lib/zones/domain/geometry-overlap";
-import type { ZoneGeometry } from "@/lib/zones/domain/zone";
+import {
+  DEFAULT_POINT_RADIUS_M,
+  MAX_POLYGON_DIAMETER_M,
+  POINT_RADIUS_OPTIONS_M,
+} from "@/app/constants/map";
+import { isLatLngVertexSetWithinMaxDiameter } from "@/lib/zones/domain/geo-distance";
+import type { GeoJsonPosition, ZoneGeometry } from "@/lib/zones/domain/zone";
 import type { MapTranslations } from "./map-screen";
 import type {
   DrawMode,
@@ -29,9 +35,6 @@ const DEFAULT_GEOLOCATION_OPTIONS: GeolocationOptions = {
   timeout: 10_000,
   maximumAge: 60_000,
 };
-
-const POINT_RADIUS_OPTIONS_M = [100, 150, 200, 250, 300] as const;
-const DEFAULT_POINT_RADIUS_M = 150;
 
 function resolveLocationStatus(
   error: GeolocationPositionError,
@@ -246,6 +249,8 @@ export function useZoneCreation({
   const [pointRadiusM, setPointRadiusM] = useState(DEFAULT_POINT_RADIUS_M);
   const [pointCenter, setPointCenter] = useState<LatLngPosition | null>(null);
   const [polygonVertices, setPolygonVertices] = useState<LatLngPosition[]>([]);
+  const polygonVerticesRef = useRef<LatLngPosition[]>(polygonVertices);
+  polygonVerticesRef.current = polygonVertices;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -289,9 +294,21 @@ export function useZoneCreation({
         return;
       }
 
-      setPolygonVertices((current) => [...current, position]);
+      const nextVertices: LatLngPosition[] = [...polygonVerticesRef.current, position];
+      if (!isLatLngVertexSetWithinMaxDiameter(nextVertices)) {
+        setSubmitError(
+          translations.zoneCreatePolygonDiameterExceeded.replace(
+            "{maxM}",
+            String(MAX_POLYGON_DIAMETER_M),
+          ),
+        );
+        setSubmitSuccess(null);
+        return;
+      }
+
+      setPolygonVertices(nextVertices);
     },
-    [canCreate, drawMode],
+    [canCreate, drawMode, translations.zoneCreatePolygonDiameterExceeded],
   );
 
   const removeLastPolygonVertex = useCallback(() => {
@@ -347,8 +364,19 @@ export function useZoneCreation({
         return false;
       }
 
-      const ring = [...polygonVertices, polygonVertices[0]].map(
-        ([lat, lng]) => [lng, lat],
+      if (!isLatLngVertexSetWithinMaxDiameter(polygonVertices)) {
+        setSubmitError(
+          translations.zoneCreatePolygonDiameterExceeded.replace(
+            "{maxM}",
+            String(MAX_POLYGON_DIAMETER_M),
+          ),
+        );
+        setSubmitSuccess(null);
+        return false;
+      }
+
+      const ring: GeoJsonPosition[] = [...polygonVertices, polygonVertices[0]].map(
+        ([lat, lng]): GeoJsonPosition => [lng, lat],
       );
 
       geometry = {
@@ -398,6 +426,16 @@ export function useZoneCreation({
           return false;
         }
 
+        if (payload.errorCode === "ZONE_POLYGON_DIAMETER_EXCEEDED") {
+          setSubmitError(
+            translations.zoneCreatePolygonDiameterExceeded.replace(
+              "{maxM}",
+              String(MAX_POLYGON_DIAMETER_M),
+            ),
+          );
+          return false;
+        }
+
         setSubmitError(payload.error ?? translations.zoneCreateFailedFallback);
         return false;
       }
@@ -429,6 +467,7 @@ export function useZoneCreation({
     translations.zoneCreateFailedFallback,
     translations.zoneCreateNameRequired,
     translations.zoneCreatePointRequired,
+    translations.zoneCreatePolygonDiameterExceeded,
     translations.zoneCreatePolygonRequired,
     translations.zoneCreateSuccess,
     translations.zoneCreateTermsRequired,

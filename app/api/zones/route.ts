@@ -5,6 +5,7 @@ import { clampRadiusKm, parseFiniteNumber } from "@/lib/zones/utils/number";
 import { toZoneDTO } from "@/lib/zones/application/zone-dto";
 import {
   ZoneGeometryConflictError,
+  ZonePolygonDiameterExceededError,
   ZoneValidationError,
 } from "@/lib/zones/domain/validation";
 import { SupabaseZoneRepository } from "@/lib/zones/infrastructure/supabase-zone-repository";
@@ -152,6 +153,16 @@ export async function POST(request: NextRequest): Promise<Response> {
           error: error.message,
         },
         { status: 409 },
+      );
+    }
+
+    if (error instanceof ZonePolygonDiameterExceededError) {
+      return Response.json(
+        {
+          errorCode: "ZONE_POLYGON_DIAMETER_EXCEEDED",
+          error: error.message,
+        },
+        { status: 400 },
       );
     }
 

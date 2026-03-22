@@ -28,9 +28,8 @@ import {
   useZonesByViewport,
 } from "./leaflet-map.hooks";
 import type { LeafletMapProps } from "./leaflet-map.types";
+import { MAX_POLYGON_DIAMETER_M, POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
 import { ZoneDetailCard } from "./zone-detail-card";
-
-const POINT_RADIUS_OPTIONS_M = [100, 150, 200, 250, 300] as const;
 
 function LocationNotice({
   locationNotice,
@@ -118,6 +117,10 @@ function ZoneCreationPanel({
   const polygonPointsLabel = translations.zoneCreatePolygonPoints.replace(
     "{count}",
     String(polygonVertexCount),
+  );
+  const polygonHint = translations.zoneCreatePolygonHint.replace(
+    "{maxM}",
+    String(MAX_POLYGON_DIAMETER_M),
   );
   const shouldDisableUndo = polygonVertexCount === 0;
   const isPointMode = drawMode === "Point";
@@ -220,9 +223,7 @@ function ZoneCreationPanel({
         </>
       ) : (
         <>
-          <p className="mt-3 text-xs text-text-muted">
-            {translations.zoneCreatePolygonHint}
-          </p>
+          <p className="mt-3 text-xs text-text-muted">{polygonHint}</p>
           <p className="mt-1 text-xs font-medium text-text-muted">{polygonPointsLabel}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button

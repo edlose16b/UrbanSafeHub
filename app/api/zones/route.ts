@@ -129,13 +129,17 @@ export async function POST(request: NextRequest): Promise<Response> {
   const useCase = new CreateZoneUseCase(repository);
   const candidate = (payload ?? {}) as {
     name?: unknown;
+    description?: unknown;
     geometry?: unknown;
+    ratings?: unknown;
   };
 
   try {
     const createdZone = await useCase.execute({
       name: candidate.name,
+      description: candidate.description,
       geometry: candidate.geometry,
+      ratings: candidate.ratings,
       createdBy: user.id,
     });
 

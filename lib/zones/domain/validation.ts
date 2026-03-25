@@ -10,9 +10,30 @@ import {
 } from "@/app/constants/map";
 import { isPolygonRingWithinMaxDiameter } from "./geo-distance";
 import { isFiniteNumber } from "../utils/number";
+import type { TimeSegment } from "./zone-detail";
 
 const MIN_ZONE_NAME_LENGTH = 2;
 const MAX_ZONE_NAME_LENGTH = 120;
+const MAX_ZONE_DESCRIPTION_LENGTH = 400;
+const VALID_TIME_SEGMENTS: readonly TimeSegment[] = [
+  "morning",
+  "afternoon",
+  "night",
+  "early_morning",
+] as const;
+
+export type ZoneRatingCategorySlug =
+  | "crime"
+  | "foot_traffic"
+  | "lighting"
+  | "vigilance"
+  | "cctv";
+
+export type CreateZoneRatingRecord = {
+  categorySlug: ZoneRatingCategorySlug;
+  timeSegment: TimeSegment | null;
+  score: number;
+};
 
 export class ZoneValidationError extends Error {
   constructor(message: string) {
@@ -140,6 +161,122 @@ export function sanitizeZoneName(value: unknown): string {
   }
 
   return normalized;
+}
+
+export function sanitizeZoneDescription(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new ZoneValidationError("Zone description must be a string.");
+  }
+
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.length > MAX_ZONE_DESCRIPTION_LENGTH) {
+    throw new ZoneValidationError(
+      `Zone description must have at most ${MAX_ZONE_DESCRIPTION_LENGTH} characters.`,
+    );
+  }
+
+  return normalized;
+}
+
+function isValidTimeSegment(value: unknown): value is TimeSegment {
+  return typeof value === "string" && VALID_TIME_SEGMENTS.includes(value as TimeSegment);
+}
+
+function isValidCategorySlug(value: unknown): value is ZoneRatingCategorySlug {
+  return (
+    value === "crime" ||
+    value === "foot_traffic" ||
+    value === "lighting" ||
+    value === "vigilance" ||
+    value === "cctv"
+  );
+}
+
+function toRatingKey(
+  categorySlug: ZoneRatingCategorySlug,
+  timeSegment: TimeSegment | null,
+): string {
+  return `${categorySlug}:${timeSegment ?? "general"}`;
+}
+
+export function parseCreateZoneRatings(value: unknown): CreateZoneRatingRecord[] {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new ZoneValidationError("Zone ratings payload must be an array.");
+  }
+
+  const ratings = value.map((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      throw new ZoneValidationError(`Zone rating at index ${index} is invalid.`);
+    }
+
+    const candidate = entry as {
+      categorySlug?: unknown;
+      timeSegment?: unknown;
+      score?: unknown;
+    };
+
+    if (!isValidCategorySlug(candidate.categorySlug)) {
+      throw new ZoneValidationError(`Unknown rating category at index ${index}.`);
+    }
+
+    if (
+      !isFiniteNumber(candidate.score) ||
+      !Number.isInteger(candidate.score) ||
+      candidate.score < 1 ||
+      candidate.score > 5
+    ) {
+      throw new ZoneValidationError(`Rating score at index ${index} must be between 1 and 5.`);
+    }
+
+    const expectsSegment =
+      candidate.categorySlug === "crime" ||
+      candidate.categorySlug === "foot_traffic" ||
+      candidate.categorySlug === "vigilance";
+
+    if (expectsSegment) {
+      if (!isValidTimeSegment(candidate.timeSegment)) {
+        throw new ZoneValidationError(
+          `Rating category ${candidate.categorySlug} requires a valid time segment.`,
+        );
+      }
+    } else if (candidate.timeSegment !== null && candidate.timeSegment !== undefined) {
+      throw new ZoneValidationError(
+        `Rating category ${candidate.categorySlug} does not allow a time segment.`,
+      );
+    }
+
+    return {
+      categorySlug: candidate.categorySlug,
+      timeSegment: expectsSegment
+        ? (candidate.timeSegment as TimeSegment)
+        : null,
+      score: Math.round(candidate.score),
+    } satisfies CreateZoneRatingRecord;
+  });
+
+  const seen = new Set<string>();
+  for (const rating of ratings) {
+    const key = toRatingKey(rating.categorySlug, rating.timeSegment);
+    if (seen.has(key)) {
+      throw new ZoneValidationError(`Duplicate rating detected for ${key}.`);
+    }
+    seen.add(key);
+  }
+
+  return ratings;
 }
 
 export function parseZoneGeometry(value: unknown): ZoneGeometry {

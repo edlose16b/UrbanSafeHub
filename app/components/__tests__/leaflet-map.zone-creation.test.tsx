@@ -5,8 +5,23 @@ import dictionary from "@/app/i18n/dictionaries/en.json";
 import type { MapTranslations } from "../map-screen";
 import type { LatLngPosition } from "../leaflet-map.types";
 import { useZoneCreation } from "../leaflet-map.hooks";
+import { SEGMENT_ORDER } from "@/lib/zones/rating-time-segments";
 
 const translations = dictionary.map as MapTranslations;
+
+function fillRequiredRatings(
+  result: ReturnType<typeof renderHook<typeof useZoneCreation>>["result"],
+) {
+  act(() => {
+    for (const segment of SEGMENT_ORDER) {
+      result.current.onMetricScoreChange("crime", segment, 4);
+      result.current.onMetricScoreChange("foot_traffic", segment, 3);
+    }
+    result.current.onInfrastructureScoreChange("lighting", 5);
+    result.current.onInfrastructureScoreChange("cctv", 4);
+    result.current.onInfrastructureScoreChange("vigilance", 2);
+  });
+}
 
 describe("useZoneCreation", () => {
   const baseLat = -12.0464;
@@ -57,7 +72,9 @@ describe("useZoneCreation", () => {
 
     act(() => {
       result.current.setZoneName("Test point");
+      result.current.setZoneDescription("Draft description");
     });
+    fillRequiredRatings(result);
 
     await act(async () => {
       const ok = await result.current.submit();
@@ -69,11 +86,22 @@ describe("useZoneCreation", () => {
     expect(init?.method).toBe("POST");
     const body = JSON.parse((init?.body as string) ?? "{}");
     expect(body.name).toBe("Test point");
+    expect(body.description).toBe("Draft description");
     expect(body.geometry.type).toBe("Point");
     expect(body.geometry.coordinates).toEqual([baseLng, baseLat]);
     expect(body.geometry.radiusM).toBe(150);
+    expect(body.ratings).toHaveLength(14);
+    expect(body.ratings).toEqual(
+      expect.arrayContaining([
+        { categorySlug: "lighting", timeSegment: null, score: 5 },
+        { categorySlug: "cctv", timeSegment: null, score: 4 },
+        { categorySlug: "vigilance", timeSegment: "morning", score: 2 },
+        { categorySlug: "crime", timeSegment: "night", score: 4 },
+      ]),
+    );
     expect(onZoneCreated).toHaveBeenCalledWith(createdZone);
     expect(result.current.zoneName).toBe("");
+    expect(result.current.zoneDescription).toBe("");
     expect(result.current.pointCenter).toBeNull();
     expect(result.current.submitSuccess).toBe(translations.zoneCreateSuccess);
   });
@@ -91,6 +119,7 @@ describe("useZoneCreation", () => {
     act(() => {
       result.current.setZoneName("Test point");
     });
+    fillRequiredRatings(result);
 
     await act(async () => {
       const ok = await result.current.submit();
@@ -113,6 +142,7 @@ describe("useZoneCreation", () => {
     act(() => {
       result.current.setZoneName("N");
     });
+    fillRequiredRatings(result);
 
     await act(async () => {
       const ok = await result.current.submit();
@@ -120,5 +150,51 @@ describe("useZoneCreation", () => {
     });
 
     expect(result.current.submitError).toBe(translations.zoneCreateTermsRequired);
+  });
+
+  it("allows submit when ratings are empty", async () => {
+    const createdZone: ZoneDTO = {
+      id: "zone-2",
+      name: "Minimal point",
+      geometry: {
+        type: "Point",
+        coordinates: [baseLng, baseLat],
+        radiusM: 150,
+      },
+      crimeLevel: null,
+      createdBy: "user-1",
+      createdAt: new Date().toISOString(),
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ zone: createdZone }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useZoneCreation({
+        canCreate: true,
+        existingZones: [],
+        translations,
+        onZoneCreated: vi.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.handleMapClick(base);
+      result.current.setZoneName("Minimal point");
+    });
+
+    await act(async () => {
+      const ok = await result.current.submit();
+      expect(ok).toBe(true);
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse((init?.body as string) ?? "{}");
+    expect(body.ratings).toEqual([]);
   });
 });

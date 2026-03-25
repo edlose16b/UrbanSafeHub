@@ -71,7 +71,8 @@ model Profile {
 }
 
 model RatingCategory {
-  slug                String                @id
+  ulid                String                @id
+  slug                String                @unique
   label               String
   requiresTimeSegment Boolean               @map("requires_time_segment")
   createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -85,6 +86,7 @@ model RatingCategory {
 model Zone {
   id         String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
+  description String?
   geom       Unsupported("geometry(Geometry,4326)")
   radiusM    Int?                                   @map("radius_m")
   createdBy  String                                 @map("created_by") @db.Uuid

@@ -30,7 +30,6 @@ import {
   useZonesByViewport,
 } from "./leaflet-map.hooks";
 import type { LeafletMapProps } from "./leaflet-map.types";
-import { POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
 import { ZoneDetailCard } from "./zone-detail-card";
 import {
   getZoneCenter,
@@ -39,6 +38,7 @@ import {
   zoneMatchesSearch,
   type ZoneFilterKey,
 } from "./leaflet-map.utils";
+import { ZoneCreationForm } from "./zone-creation-form";
 
 function LocationNotice({
   locationNotice,
@@ -184,158 +184,6 @@ function SearchResults({
   );
 }
 
-type ZoneCreationPanelProps = {
-  isVisible: boolean;
-  hasAcceptedTerms: boolean;
-  zoneName: string;
-  pointRadiusM: number;
-  pointCenterReady: boolean;
-  isSubmitting: boolean;
-  submitError: string | null;
-  submitSuccess: string | null;
-  onAcceptedTermsChange: (checked: boolean) => void;
-  onNameChange: (nextName: string) => void;
-  onRadiusChange: (value: number) => void;
-  onClearDraft: () => void;
-  onSubmit: () => Promise<boolean>;
-  translations: LeafletMapProps["translations"];
-};
-
-function ZoneCreationPanel({
-  isVisible,
-  hasAcceptedTerms,
-  zoneName,
-  pointRadiusM,
-  pointCenterReady,
-  isSubmitting,
-  submitError,
-  submitSuccess,
-  onAcceptedTermsChange,
-  onNameChange,
-  onRadiusChange,
-  onClearDraft,
-  onSubmit,
-  translations,
-}: ZoneCreationPanelProps) {
-  if (!isVisible) {
-    return null;
-  }
-
-  const isSubmitDisabled = isSubmitting || !zoneName.trim() || !hasAcceptedTerms;
-
-  return (
-    <form
-      className="glass-panel ghost-outline absolute top-44 left-4 z-[1000] w-80 rounded-[1.4rem] p-4 text-sm text-foreground md:top-24"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void onSubmit();
-      }}
-    >
-      <h2 className="font-display text-lg font-semibold leading-none">
-        {translations.zoneCreatePanelTitle}
-      </h2>
-      <div className="mt-3 rounded-[1rem] bg-warning px-3 py-2.5 text-xs leading-relaxed text-warning-foreground ghost-outline">
-        <p>{translations.zoneCreateTermsAlert}</p>
-        <label className="mt-2 flex cursor-pointer items-start gap-2">
-          <input
-            type="checkbox"
-            checked={hasAcceptedTerms}
-            onChange={(event) => onAcceptedTermsChange(event.target.checked)}
-            className="mt-0.5 h-4 w-4"
-          />
-          <span>{translations.zoneCreateTermsCheckbox}</span>
-        </label>
-      </div>
-
-      <label className="mt-3 block">
-        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-          {translations.zoneCreateNameLabel}
-        </span>
-        <input
-          type="text"
-          value={zoneName}
-          onChange={(event) => onNameChange(event.target.value)}
-          placeholder={translations.zoneCreateNamePlaceholder}
-          className="ghost-outline w-full rounded-[0.9rem] bg-input px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:bg-surface-lowest"
-          maxLength={120}
-        />
-      </label>
-
-      <div className="mt-3">
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-          {translations.zoneCreateTypeLabel}
-        </p>
-        <div className="rounded-[0.9rem] bg-surface-high px-3 py-2 text-xs font-medium text-foreground">
-          {translations.zoneCreateTypeRadius}
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-          {translations.zoneCreateRadiusLabel}
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          {POINT_RADIUS_OPTIONS_M.map((radiusOption) => (
-            <button
-              key={radiusOption}
-              type="button"
-              onClick={() => onRadiusChange(radiusOption)}
-              className={`rounded-[0.9rem] px-3 py-2 text-xs font-medium transition-all ${
-                pointRadiusM === radiusOption
-                  ? "bg-surface-bright text-foreground shadow-[0_0_18px_rgba(255,83,82,0.16)] ghost-outline"
-                  : "bg-surface-muted text-text-muted hover:bg-surface-high"
-              }`}
-              aria-pressed={pointRadiusM === radiusOption}
-            >
-              {radiusOption}m
-            </button>
-          ))}
-        </div>
-        <span className="mt-1 block text-xs text-text-secondary">
-          {translations.zoneCreateRadiusHint}
-        </span>
-      </div>
-      <p className="mt-3 text-xs text-text-muted">
-        {pointCenterReady
-          ? translations.zoneCreatePointReady
-          : translations.zoneCreatePointHint}
-      </p>
-      <button
-        type="button"
-        onClick={onClearDraft}
-        disabled={!pointCenterReady}
-        className="mt-3 w-full rounded-full bg-surface-high px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.12em] text-text-muted transition-colors hover:bg-surface-bright disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {translations.zoneCreateClearDraft}
-      </button>
-
-      {submitError ? (
-        <p
-          role="alert"
-          className="mt-3 rounded-[0.9rem] bg-danger px-3 py-2 text-xs text-danger-foreground"
-        >
-          {submitError}
-        </p>
-      ) : null}
-      {submitSuccess ? (
-        <p className="mt-3 rounded-[0.9rem] bg-success px-3 py-2 text-xs text-success-foreground">
-          {submitSuccess}
-        </p>
-      ) : null}
-
-      <button
-        type="submit"
-        disabled={isSubmitDisabled}
-        className="primary-glow mt-4 w-full rounded-full px-3 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isSubmitting
-          ? translations.zoneCreateSubmitting
-          : translations.zoneCreateSubmit}
-      </button>
-    </form>
-  );
-}
-
 function MobileBottomBar({
   isLegendVisible,
   onMapTap,
@@ -437,13 +285,20 @@ export default function LeafletMap({
   const effectiveCanCreateZone = isCreatePanelVisible && hasAcceptedTerms;
   const {
     zoneName,
+    zoneDescription,
     pointRadiusM,
     pointCenter,
+    crimeScores,
+    footTrafficScores,
+    infrastructureScores,
     isSubmitting,
     submitError,
     submitSuccess,
     setZoneName,
+    setZoneDescription,
     onPointRadiusChange,
+    onMetricScoreChange,
+    onInfrastructureScoreChange,
     handleMapClick,
     clearGeometry,
     resetCreationState,
@@ -654,19 +509,28 @@ export default function LeafletMap({
       </header>
 
       <LocationNotice locationNotice={locationNotice} />
-      <ZoneCreationPanel
+      <ZoneCreationForm
         isVisible={isCreatePanelVisible}
         hasAcceptedTerms={hasAcceptedTerms}
         zoneName={zoneName}
+        zoneDescription={zoneDescription}
         pointRadiusM={pointRadiusM}
         pointCenterReady={pointCenter !== null}
+        crimeScores={crimeScores}
+        footTrafficScores={footTrafficScores}
+        infrastructureScores={infrastructureScores}
         isSubmitting={isSubmitting}
         submitError={submitError}
         submitSuccess={submitSuccess}
+        isSubmitDisabled={isSubmitting || !zoneName.trim() || !hasAcceptedTerms}
         onAcceptedTermsChange={handleAcceptedTermsChange}
         onNameChange={setZoneName}
+        onDescriptionChange={setZoneDescription}
         onRadiusChange={onPointRadiusChange}
+        onMetricScoreChange={onMetricScoreChange}
+        onInfrastructureScoreChange={onInfrastructureScoreChange}
         onClearDraft={clearGeometry}
+        onCancel={() => handleSetCreateMode(false)}
         onSubmit={submit}
         translations={translations}
       />

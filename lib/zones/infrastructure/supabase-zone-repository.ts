@@ -16,6 +16,7 @@ import type {
   ZoneSnapshot,
 } from "../domain/zone";
 import {
+  type CreateZoneRatingRecord,
   ZoneGeometryConflictError,
   ZoneValidationError,
 } from "../domain/validation";
@@ -450,7 +451,9 @@ export class SupabaseZoneRepository
 
   async create(record: {
     name: string;
+    description: string | null;
     geometry: ZoneGeometry;
+    ratings: CreateZoneRatingRecord[];
     createdBy: string;
   }): Promise<ZoneSnapshot> {
     await this.assertNoGeometryConflict(record.geometry);
@@ -459,6 +462,7 @@ export class SupabaseZoneRepository
       .from("zones")
       .insert({
         name: record.name,
+        description: record.description,
         geom: toEwktGeometry(record.geometry),
         radius_m: record.geometry.type === "Point" ? record.geometry.radiusM : null,
         created_by: record.createdBy,
@@ -468,6 +472,24 @@ export class SupabaseZoneRepository
 
     if (error) {
       throw new Error(`Unable to create zone: ${error.message}`);
+    }
+
+    if (record.ratings.length > 0) {
+      const { error: ratingsError } = await this.supabase.from("zone_ratings").insert(
+        record.ratings.map((rating) => ({
+          zone_id: data.id,
+          user_id: record.createdBy,
+          category_slug: rating.categorySlug,
+          time_segment: rating.timeSegment,
+          score: rating.score,
+          is_current: true,
+        })),
+      );
+
+      if (ratingsError) {
+        await this.supabase.from("zones").delete().eq("id", data.id);
+        throw new Error(`Unable to create zone ratings: ${ratingsError.message}`);
+      }
     }
 
     return toSnapshot(data as ZoneRow, null);

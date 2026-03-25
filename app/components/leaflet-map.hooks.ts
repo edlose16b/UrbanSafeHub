@@ -7,6 +7,15 @@ import { DEFAULT_POINT_RADIUS_M, POINT_RADIUS_OPTIONS_M } from "@/app/constants/
 import type { ZoneGeometry } from "@/lib/zones/domain/zone";
 import type { MapTranslations } from "./map-screen";
 import type { LatLngPosition, LocationStatus, ViewportQuery } from "./leaflet-map.types";
+import type { SegmentKey } from "@/lib/zones/rating-time-segments";
+import {
+  buildZoneCreationRatingsPayload,
+  createEmptyInfrastructureScores,
+  createEmptyMetricScores,
+  type ZoneCreationInfrastructureScores,
+  type ZoneCreationMetricScores,
+  type ZoneRatingScore,
+} from "./zone-creation-form.utils";
 import {
   shouldFetchViewport,
   getInitialLocationStatus,
@@ -235,8 +244,17 @@ export function useZoneCreation({
   onZoneCreated,
 }: ZoneCreationHookOptions) {
   const [zoneName, setZoneName] = useState("");
+  const [zoneDescription, setZoneDescription] = useState("");
   const [pointRadiusM, setPointRadiusM] = useState(DEFAULT_POINT_RADIUS_M);
   const [pointCenter, setPointCenter] = useState<LatLngPosition | null>(null);
+  const [crimeScores, setCrimeScores] = useState<ZoneCreationMetricScores>(
+    createEmptyMetricScores,
+  );
+  const [footTrafficScores, setFootTrafficScores] = useState<ZoneCreationMetricScores>(
+    createEmptyMetricScores,
+  );
+  const [infrastructureScores, setInfrastructureScores] =
+    useState<ZoneCreationInfrastructureScores>(createEmptyInfrastructureScores);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -247,11 +265,55 @@ export function useZoneCreation({
 
   const resetCreationState = useCallback(() => {
     setZoneName("");
+    setZoneDescription("");
     setPointRadiusM(DEFAULT_POINT_RADIUS_M);
     setPointCenter(null);
+    setCrimeScores(createEmptyMetricScores());
+    setFootTrafficScores(createEmptyMetricScores());
+    setInfrastructureScores(createEmptyInfrastructureScores());
     setSubmitError(null);
     setSubmitSuccess(null);
   }, []);
+
+  const onMetricScoreChange = useCallback(
+    (
+      category: "crime" | "foot_traffic",
+      segment: SegmentKey,
+      score: ZoneRatingScore,
+    ) => {
+      setSubmitError(null);
+      setSubmitSuccess(null);
+
+      if (category === "crime") {
+        setCrimeScores((current) => ({
+          ...current,
+          [segment]: score,
+        }));
+        return;
+      }
+
+      setFootTrafficScores((current) => ({
+        ...current,
+        [segment]: score,
+      }));
+    },
+    [],
+  );
+
+  const onInfrastructureScoreChange = useCallback(
+    (
+      category: keyof ZoneCreationInfrastructureScores,
+      score: ZoneRatingScore,
+    ) => {
+      setSubmitError(null);
+      setSubmitSuccess(null);
+      setInfrastructureScores((current) => ({
+        ...current,
+        [category]: score,
+      }));
+    },
+    [],
+  );
 
   const handleMapClick = useCallback(
     (position: LatLngPosition) => {
@@ -285,6 +347,7 @@ export function useZoneCreation({
     }
 
     const name = zoneName.trim();
+    const description = zoneDescription.trim();
 
     if (!name) {
       setSubmitError(translations.zoneCreateNameRequired);
@@ -292,15 +355,13 @@ export function useZoneCreation({
       return false;
     }
 
-    let geometry: ZoneGeometry;
-
     if (!pointCenter) {
       setSubmitError(translations.zoneCreatePointRequired);
       setSubmitSuccess(null);
       return false;
     }
 
-    geometry = {
+    const geometry: ZoneGeometry = {
       type: "Point",
       coordinates: [pointCenter[1], pointCenter[0]],
       radiusM: pointRadiusM,
@@ -319,6 +380,12 @@ export function useZoneCreation({
       return false;
     }
 
+    const ratings = buildZoneCreationRatingsPayload({
+      crimeScores,
+      footTrafficScores,
+      infrastructureScores,
+    });
+
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitSuccess(null);
@@ -331,7 +398,9 @@ export function useZoneCreation({
         },
         body: JSON.stringify({
           name,
+          description,
           geometry,
+          ratings,
         }),
       });
 
@@ -355,8 +424,7 @@ export function useZoneCreation({
         onZoneCreated(payload.zone);
       }
 
-      setZoneName("");
-      clearGeometry();
+      resetCreationState();
       setSubmitSuccess(translations.zoneCreateSuccess);
       return true;
     } catch {
@@ -367,30 +435,41 @@ export function useZoneCreation({
     }
   }, [
     canCreate,
-    clearGeometry,
+    crimeScores,
     existingZones,
+    footTrafficScores,
+    infrastructureScores,
     isSubmitting,
     onZoneCreated,
     pointCenter,
     pointRadiusM,
+    resetCreationState,
     translations.zoneCreateFailedFallback,
     translations.zoneCreateNameRequired,
     translations.zoneCreatePointRequired,
     translations.zoneCreateSuccess,
     translations.zoneCreateTermsRequired,
+    zoneDescription,
     zoneName,
     notifyOverlapError,
   ]);
 
   return {
     zoneName,
+    zoneDescription,
     pointRadiusM,
     pointCenter,
+    crimeScores,
+    footTrafficScores,
+    infrastructureScores,
     isSubmitting,
     submitError,
     submitSuccess,
     setZoneName,
+    setZoneDescription,
     onPointRadiusChange,
+    onMetricScoreChange,
+    onInfrastructureScoreChange,
     handleMapClick,
     clearGeometry,
     resetCreationState,

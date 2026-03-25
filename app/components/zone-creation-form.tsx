@@ -1,0 +1,511 @@
+"use client";
+
+import { POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
+import type { LeafletMapProps } from "./leaflet-map.types";
+import {
+  SEGMENT_ORDER,
+  type SegmentKey,
+} from "@/lib/zones/rating-time-segments";
+import type {
+  NullableZoneRatingScore,
+  ZoneCreationInfrastructureScores,
+  ZoneCreationMetricScores,
+  ZoneRatingScore,
+} from "./zone-creation-form.utils";
+
+type ZoneCreationFormProps = {
+  isVisible: boolean;
+  hasAcceptedTerms: boolean;
+  zoneName: string;
+  zoneDescription: string;
+  pointRadiusM: number;
+  pointCenterReady: boolean;
+  crimeScores: ZoneCreationMetricScores;
+  footTrafficScores: ZoneCreationMetricScores;
+  infrastructureScores: ZoneCreationInfrastructureScores;
+  isSubmitting: boolean;
+  submitError: string | null;
+  submitSuccess: string | null;
+  isSubmitDisabled: boolean;
+  onAcceptedTermsChange: (checked: boolean) => void;
+  onNameChange: (nextName: string) => void;
+  onDescriptionChange: (nextDescription: string) => void;
+  onRadiusChange: (value: number) => void;
+  onMetricScoreChange: (
+    category: "crime" | "foot_traffic",
+    segment: SegmentKey,
+    score: ZoneRatingScore,
+  ) => void;
+  onInfrastructureScoreChange: (
+    category: keyof ZoneCreationInfrastructureScores,
+    score: ZoneRatingScore,
+  ) => void;
+  onClearDraft: () => void;
+  onCancel: () => void;
+  onSubmit: () => Promise<boolean>;
+  translations: LeafletMapProps["translations"];
+};
+
+const SCORE_OPTIONS: readonly ZoneRatingScore[] = [1, 2, 3, 4, 5] as const;
+
+const SEGMENT_EMOJIS: Record<SegmentKey, string> = {
+  morning: "☀️",
+  afternoon: "🌤️",
+  night: "🌙",
+  early_morning: "🌑",
+};
+
+function resolveSegmentLabel(
+  segment: SegmentKey,
+  translations: LeafletMapProps["translations"],
+): string {
+  switch (segment) {
+    case "morning":
+      return translations.zoneDetailSegmentMorning;
+    case "afternoon":
+      return translations.zoneDetailSegmentAfternoon;
+    case "night":
+      return translations.zoneDetailSegmentNight;
+    case "early_morning":
+      return translations.zoneDetailSegmentEarlyMorning;
+  }
+}
+
+function resolveScaleLabel(
+  score: ZoneRatingScore,
+  translations: LeafletMapProps["translations"],
+): string {
+  switch (score) {
+    case 1:
+      return translations.zoneCreateScoreOption1;
+    case 2:
+      return translations.zoneCreateScoreOption2;
+    case 3:
+      return translations.zoneCreateScoreOption3;
+    case 4:
+      return translations.zoneCreateScoreOption4;
+    case 5:
+      return translations.zoneCreateScoreOption5;
+  }
+}
+
+function ScorePips({
+  value,
+}: {
+  value: NullableZoneRatingScore;
+}) {
+  return (
+    <div className="mt-3 flex items-center justify-center gap-1">
+      {SCORE_OPTIONS.map((score) => (
+        <span
+          key={score}
+          className={`h-1.5 rounded-full transition-all ${
+            value !== null && score <= value
+              ? "w-4 bg-primary"
+              : "w-2 bg-outline-variant/45"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MetricSegmentCard({
+  metricLabel,
+  segment,
+  score,
+  onScoreChange,
+  translations,
+}: {
+  metricLabel: string;
+  segment: SegmentKey;
+  score: NullableZoneRatingScore;
+  onScoreChange: (score: ZoneRatingScore) => void;
+  translations: LeafletMapProps["translations"];
+}) {
+  const segmentLabel = resolveSegmentLabel(segment, translations);
+
+  return (
+    <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-high p-3 text-center">
+      <div className="text-xl">{SEGMENT_EMOJIS[segment]}</div>
+      <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+        {segmentLabel}
+      </p>
+      <ScorePips value={score} />
+      <div className="mt-3 grid grid-cols-5 gap-1">
+        {SCORE_OPTIONS.map((option) => {
+          const isActive = score === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onScoreChange(option)}
+              aria-label={`${metricLabel} · ${segmentLabel} · ${option}`}
+              aria-pressed={isActive}
+              className={`rounded-lg px-0 py-2 text-[11px] font-semibold transition-all ${
+                isActive
+                  ? "border border-primary/40 bg-primary/15 text-primary"
+                  : "bg-surface-lowest text-text-secondary hover:bg-surface-highest"
+              }`}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MetricGroup({
+  title,
+  scores,
+  onScoreChange,
+  translations,
+}: {
+  title: string;
+  scores: ZoneCreationMetricScores;
+  onScoreChange: (segment: SegmentKey, score: ZoneRatingScore) => void;
+  translations: LeafletMapProps["translations"];
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+          {translations.zoneCreateMetricScaleLabel}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {SEGMENT_ORDER.map((segment) => (
+          <MetricSegmentCard
+            key={segment}
+            metricLabel={title}
+            segment={segment}
+            score={scores[segment]}
+            onScoreChange={(score) => onScoreChange(segment, score)}
+            translations={translations}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function InfrastructureScale({
+  value,
+  onChange,
+  translations,
+}: {
+  value: NullableZoneRatingScore;
+  onChange: (score: ZoneRatingScore) => void;
+  translations: LeafletMapProps["translations"];
+}) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {SCORE_OPTIONS.map((score) => {
+        const isActive = value === score;
+        return (
+          <button
+            key={score}
+            type="button"
+            onClick={() => onChange(score)}
+            aria-pressed={isActive}
+            aria-label={resolveScaleLabel(score, translations)}
+            className={`rounded-lg px-0 py-2 text-[11px] font-semibold transition-all ${
+              isActive
+                ? "border border-primary/40 bg-primary text-primary-foreground"
+                : "bg-surface-highest text-text-secondary hover:bg-surface-high"
+            }`}
+          >
+            {score}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ZoneCreationForm({
+  isVisible,
+  hasAcceptedTerms,
+  zoneName,
+  zoneDescription,
+  pointRadiusM,
+  pointCenterReady,
+  crimeScores,
+  footTrafficScores,
+  infrastructureScores,
+  isSubmitting,
+  submitError,
+  submitSuccess,
+  isSubmitDisabled,
+  onAcceptedTermsChange,
+  onNameChange,
+  onDescriptionChange,
+  onRadiusChange,
+  onMetricScoreChange,
+  onInfrastructureScoreChange,
+  onClearDraft,
+  onCancel,
+  onSubmit,
+  translations,
+}: ZoneCreationFormProps) {
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <form
+      className="glass-panel ghost-outline absolute top-20 left-4 z-[1000] max-h-[calc(100vh-7rem)] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-[1.6rem] p-5 text-sm text-foreground md:top-24 md:p-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSubmit();
+      }}
+    >
+      <header>
+        <h2 className="font-display text-xl font-semibold leading-none md:text-[1.4rem]">
+          {translations.zoneCreatePanelTitle}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+          {translations.zoneCreatePanelSubtitle}
+        </p>
+      </header>
+
+      <div className="mt-4 rounded-[1rem] bg-warning px-3 py-2.5 text-xs leading-relaxed text-warning-foreground ghost-outline">
+        <p>{translations.zoneCreateTermsAlert}</p>
+        <label className="mt-2 flex cursor-pointer items-start gap-2">
+          <input
+            type="checkbox"
+            checked={hasAcceptedTerms}
+            onChange={(event) => onAcceptedTermsChange(event.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>{translations.zoneCreateTermsCheckbox}</span>
+        </label>
+      </div>
+
+      <section className="mt-6">
+        <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
+            {translations.zoneCreateSectionBasic}
+          </span>
+          <button
+            type="button"
+            onClick={onClearDraft}
+            className="rounded-full border border-primary/30 bg-primary/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/20"
+          >
+            {pointCenterReady
+              ? translations.zoneCreateRedrawRadius
+              : translations.zoneCreateDrawRadius}
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              {translations.zoneCreateNameLabel}
+            </span>
+            <input
+              type="text"
+              value={zoneName}
+              onChange={(event) => onNameChange(event.target.value)}
+              placeholder={translations.zoneCreateNamePlaceholder}
+              className="ghost-outline w-full rounded-[1rem] bg-input px-3 py-3 text-sm text-foreground outline-none transition-colors focus:bg-surface-lowest"
+              maxLength={120}
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              {translations.zoneCreateDescriptionLabel}
+            </span>
+            <textarea
+              value={zoneDescription}
+              onChange={(event) => onDescriptionChange(event.target.value)}
+              placeholder={translations.zoneCreateDescriptionPlaceholder}
+              className="ghost-outline min-h-24 w-full rounded-[1rem] bg-input px-3 py-3 text-sm text-foreground outline-none transition-colors focus:bg-surface-lowest"
+              maxLength={400}
+            />
+          </label>
+
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              {translations.zoneCreateRadiusLabel}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {POINT_RADIUS_OPTIONS_M.map((radiusOption) => (
+                <button
+                  key={radiusOption}
+                  type="button"
+                  onClick={() => onRadiusChange(radiusOption)}
+                  className={`rounded-[0.9rem] px-3 py-2 text-xs font-medium transition-all ${
+                    pointRadiusM === radiusOption
+                      ? "bg-surface-bright text-foreground shadow-[0_0_18px_rgba(255,83,82,0.16)] ghost-outline"
+                      : "bg-surface-muted text-text-muted hover:bg-surface-high"
+                  }`}
+                  aria-pressed={pointRadiusM === radiusOption}
+                >
+                  {radiusOption}m
+                </button>
+              ))}
+            </div>
+            <span className="mt-2 block text-xs text-text-secondary">
+              {pointCenterReady
+                ? translations.zoneCreatePointReady
+                : translations.zoneCreatePointHint}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <div className="border-b border-outline-variant/20 pb-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
+            {translations.zoneCreateSectionMetrics}
+          </span>
+        </div>
+
+        <div className="mt-5 space-y-6">
+          <MetricGroup
+            title={translations.zoneCreateMetricCrime}
+            scores={crimeScores}
+            onScoreChange={(segment, score) =>
+              onMetricScoreChange("crime", segment, score)
+            }
+            translations={translations}
+          />
+
+          <MetricGroup
+            title={translations.zoneCreateMetricFootTraffic}
+            scores={footTrafficScores}
+            onScoreChange={(segment, score) =>
+              onMetricScoreChange("foot_traffic", segment, score)
+            }
+            translations={translations}
+          />
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <div className="border-b border-outline-variant/20 pb-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
+            {translations.zoneCreateSectionInfrastructure}
+          </span>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-foreground">
+                {translations.zoneCreateInfrastructureLighting}
+              </span>
+              <select
+                value={infrastructureScores.lighting ?? ""}
+                onChange={(event) =>
+                  event.target.value
+                    ? onInfrastructureScoreChange(
+                        "lighting",
+                        Number(event.target.value) as ZoneRatingScore,
+                      )
+                    : undefined
+                }
+                className="rounded-lg bg-surface-highest px-3 py-2 text-xs text-foreground outline-none"
+              >
+                <option value="">{translations.zoneCreateLightingPlaceholder}</option>
+                {SCORE_OPTIONS.map((score) => (
+                  <option key={score} value={score}>
+                    {resolveScaleLabel(score, translations)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-foreground">
+                {translations.zoneCreateInfrastructureCctv}
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+                {translations.zoneCreateMetricScaleLabel}
+              </span>
+            </div>
+            <InfrastructureScale
+              value={infrastructureScores.cctv}
+              onChange={(score) => onInfrastructureScoreChange("cctv", score)}
+              translations={translations}
+            />
+          </div>
+
+          <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-foreground">
+                {translations.zoneCreateInfrastructureVigilance}
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+                {translations.zoneCreateMetricScaleLabel}
+              </span>
+            </div>
+            <div className="grid gap-2">
+              {SCORE_OPTIONS.map((score) => {
+                const isActive = infrastructureScores.vigilance === score;
+                return (
+                  <button
+                    key={score}
+                    type="button"
+                    onClick={() => onInfrastructureScoreChange("vigilance", score)}
+                    aria-pressed={isActive}
+                    className={`flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all ${
+                      isActive
+                        ? "border border-primary/35 bg-primary/12 text-primary"
+                        : "bg-surface-high text-foreground hover:bg-surface-highest"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">
+                      {resolveScaleLabel(score, translations)}
+                    </span>
+                    <span className="text-xs font-semibold">{score}/5</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {submitError ? (
+        <p
+          role="alert"
+          className="mt-4 rounded-[0.9rem] bg-danger px-3 py-2 text-xs text-danger-foreground"
+        >
+          {submitError}
+        </p>
+      ) : null}
+      {submitSuccess ? (
+        <p className="mt-4 rounded-[0.9rem] bg-success px-3 py-2 text-xs text-success-foreground">
+          {submitSuccess}
+        </p>
+      ) : null}
+
+      <div className="mt-5 flex gap-3 pb-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-xl border border-outline-variant/20 px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-text-secondary transition-colors hover:bg-surface-high"
+        >
+          {translations.zoneCreateCancel}
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitDisabled}
+          className="primary-glow flex-1 rounded-xl px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-primary-foreground transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSubmitting
+            ? translations.zoneCreateSubmitting
+            : translations.zoneCreateSubmit}
+        </button>
+      </div>
+    </form>
+  );
+}

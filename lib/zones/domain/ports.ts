@@ -1,9 +1,12 @@
 import type { ZoneGeometry, ZoneSnapshot } from "./zone";
 import type { ZoneDetailSnapshot } from "./zone-detail";
+import type { CreateZoneRatingRecord } from "./validation";
 
 export type CreateZoneRecord = {
   name: string;
+  description: string | null;
   geometry: ZoneGeometry;
+  ratings: CreateZoneRatingRecord[];
   createdBy: string;
 };
 

@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { SEGMENT_ORDER, type SegmentKey } from "@/lib/zones/rating-time-segments";
 import type { MapTranslations } from "./map-screen";
+import { getZoneSeverity, getZoneTrendSummary } from "./leaflet-map.utils";
 
 const RATING_CATEGORY_ORDER = [
   "crime",
@@ -80,11 +81,11 @@ function CategoryScoreBlock({
   ];
 
   return (
-    <div className="rounded-xl bg-surface-muted/60 px-3.5 py-3">
+    <div className="rounded-[1rem] bg-surface-muted px-3.5 py-3">
       <p className="text-sm font-medium text-foreground">
         {resolveCategoryLabel(categorySlug, translations)}
       </p>
-      <ul className="mt-2.5 space-y-0 divide-y divide-border/60">
+      <ul className="mt-2.5 space-y-1.5">
         {segmentRows.map(({ segmentKey, label }) => {
           const mapKey = `${categorySlug}:${segmentKey}`;
           const value = valueByCell.get(mapKey) ?? translations.zoneDetailNoData;
@@ -92,7 +93,7 @@ function CategoryScoreBlock({
           return (
             <li
               key={mapKey}
-              className="flex items-baseline justify-between gap-4 py-2 first:pt-0 last:pb-0"
+              className="flex items-baseline justify-between gap-4 rounded-[0.85rem] bg-surface-high/70 px-2.5 py-2"
             >
               <span className="text-xs text-text-secondary">{label}</span>
               <span className="shrink-0 tabular-nums text-sm font-medium text-foreground">
@@ -128,6 +129,67 @@ function resolveCategoryOrder(detail: ZoneDetailDTO): string[] {
       (categorySlug) => !RATING_CATEGORY_ORDER.includes(categorySlug as never),
     ),
   ];
+}
+
+function getStatusLabel(
+  detail: ZoneDetailDTO,
+  translations: MapTranslations,
+): string {
+  const severity = getZoneSeverity(detail.zone.crimeLevel);
+
+  if (severity === "safe") {
+    return translations.zoneDetailStatusSafe;
+  }
+
+  if (severity === "moderate") {
+    return translations.zoneDetailStatusModerate;
+  }
+
+  if (severity === "danger") {
+    return translations.zoneDetailStatusDanger;
+  }
+
+  return translations.zoneDetailStatusUnknown;
+}
+
+function getStatusClasses(detail: ZoneDetailDTO): string {
+  const severity = getZoneSeverity(detail.zone.crimeLevel);
+
+  if (severity === "safe") {
+    return "bg-success text-success-foreground";
+  }
+
+  if (severity === "moderate") {
+    return "bg-warning text-warning-foreground";
+  }
+
+  if (severity === "danger") {
+    return "bg-danger text-danger-foreground";
+  }
+
+  return "bg-surface-high text-text-secondary";
+}
+
+function getProfileLabel(detail: ZoneDetailDTO, translations: MapTranslations): string {
+  const summary = getZoneTrendSummary(detail);
+
+  if (summary.direction === "day_stronger") {
+    return translations.zoneDetailProfileDayStronger;
+  }
+
+  if (summary.direction === "night_stronger") {
+    return translations.zoneDetailProfileNightStronger;
+  }
+
+  if (summary.direction === "steady") {
+    return translations.zoneDetailProfileSteady;
+  }
+
+  return translations.zoneDetailProfileInsufficientData;
+}
+
+function getSignalsCount(detail: ZoneDetailDTO): number {
+  return detail.aggregates.reduce((sum, aggregate) => sum + aggregate.ratingsCount, 0);
 }
 
 export type ZoneDetailCardProps = {
@@ -178,6 +240,11 @@ export function ZoneDetailCard({
       detail.zone.crimeLevel === null
         ? translations.zoneDetailNoCrimeData
         : `${detail.zone.crimeLevel.toFixed(2)}/5`;
+    const statusLabel = getStatusLabel(detail, translations);
+    const profileLabel = getProfileLabel(detail, translations);
+    const profileSummary = getZoneTrendSummary(detail);
+    const signalsCount = getSignalsCount(detail);
+    const latestComment = detail.comments[0]?.body ?? translations.zoneDetailNoComments;
 
     const valueByCell = buildAggregateValueMap(detail);
 
@@ -206,8 +273,47 @@ export function ZoneDetailCard({
 
     content = (
       <div className="space-y-6">
+        <section className="overflow-hidden rounded-[1.25rem] bg-surface-muted">
+          <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,83,82,0.28),transparent_34%),radial-gradient(circle_at_top_right,rgba(74,225,131,0.18),transparent_26%),linear-gradient(180deg,rgba(57,57,57,0.92),rgba(28,27,27,0.96))] px-4 py-4">
+            <div className="absolute inset-x-0 bottom-0 h-px bg-outline-variant/30" />
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${getStatusClasses(detail)}`}>
+                  {statusLabel}
+                </p>
+                <p className="mt-3 max-w-56 text-sm leading-snug text-text-muted">
+                  {latestComment}
+                </p>
+              </div>
+              <div className="rounded-full bg-black/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted ghost-outline">
+                {translations.zoneDetailProfileTitle}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 px-4 py-4 text-center">
+            <div className="rounded-[0.9rem] bg-surface-high px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+                {translations.zoneDetailCrimeLabel}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{crimeLabel}</p>
+            </div>
+            <div className="rounded-[0.9rem] bg-surface-high px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+                {translations.zoneDetailRatingsCountLabel}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{signalsCount}</p>
+            </div>
+            <div className="rounded-[0.9rem] bg-surface-high px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+                {translations.zoneDetailCommentsCountLabel}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{detail.comments.length}</p>
+            </div>
+          </div>
+        </section>
+
         <section>
-          <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted">
+          <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
             {translations.zoneDetailRatingsTitle}
           </h3>
           <div className="mt-3 space-y-3">
@@ -216,7 +322,7 @@ export function ZoneDetailCard({
           </div>
         </section>
 
-        <section className="rounded-xl bg-surface-muted/40 px-3.5 py-3 text-xs text-text-secondary">
+        <section className="rounded-[1rem] bg-surface-muted px-3.5 py-3 text-xs text-text-secondary">
           <p>
             <span className="text-text-muted">{translations.zoneDetailTypeLabel}</span>{" "}
             <span className="text-foreground">{geometryTypeLabel}</span>
@@ -249,7 +355,7 @@ export function ZoneDetailCard({
         </section>
 
         <section>
-          <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted">
+          <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">
             {translations.zoneDetailCommentsTitle}
           </h3>
           {detail.comments.length === 0 ? (
@@ -261,7 +367,7 @@ export function ZoneDetailCard({
               {detail.comments.map((comment) => (
                 <li
                   key={comment.id}
-                  className="rounded-xl bg-surface-muted/50 px-3 py-2.5"
+                  className="rounded-[1rem] bg-surface-muted px-3 py-2.5"
                 >
                   <p className="text-sm leading-snug text-foreground">{comment.body}</p>
                   <p className="mt-1.5 text-[11px] text-text-muted">
@@ -272,6 +378,21 @@ export function ZoneDetailCard({
             </ul>
           )}
         </section>
+
+        <section className="rounded-[1rem] bg-surface-muted px-3.5 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+              {translations.zoneDetailProfileTitle}
+            </p>
+            <p className="text-[11px] text-text-secondary">{profileLabel}</p>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-highest">
+            <div
+              className="h-full rounded-full bg-tertiary transition-[width]"
+              style={{ width: `${profileSummary.progressPercent}%` }}
+            />
+          </div>
+        </section>
       </div>
     );
   }
@@ -279,10 +400,12 @@ export function ZoneDetailCard({
   const headerTitle = detail?.zone.name ?? translations.zoneDetailTitle;
 
   return (
-    <aside className="absolute right-4 bottom-4 left-4 z-[1000] max-h-[56vh] overflow-y-auto rounded-2xl border border-border/80 bg-surface-solid/95 p-5 shadow-xl backdrop-blur-sm md:top-4 md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[calc(100vh-2rem)]">
+    <aside className="glass-panel ghost-outline absolute right-4 bottom-24 left-4 z-[1000] max-h-[52vh] overflow-y-auto rounded-[1.5rem] p-5 md:top-24 md:right-4 md:bottom-4 md:left-auto md:w-[380px] md:max-h-[calc(100vh-7rem)]">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold leading-snug text-foreground">{headerTitle}</h2>
+          <h2 className="font-display text-xl font-semibold leading-snug text-foreground">
+            {headerTitle}
+          </h2>
           {detail ? (
             <p className="sr-only">{translations.zoneDetailTitle}</p>
           ) : null}
@@ -290,7 +413,7 @@ export function ZoneDetailCard({
         <button
           type="button"
           onClick={onClose}
-          className="shrink-0 rounded-lg border border-border/80 bg-surface-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-muted"
+          className="shrink-0 rounded-full bg-surface-high px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground transition-colors hover:bg-surface-bright"
           aria-label={translations.zoneDetailClose}
           title={translations.zoneDetailClose}
         >

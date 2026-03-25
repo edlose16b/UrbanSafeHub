@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
+import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { ViewportQuery } from "../leaflet-map.types";
 import {
   distanceBetweenViewportCentersMeters,
+  getCrimeHeatColor,
+  getZoneCenter,
+  getZoneSeverity,
+  getZoneTrendSummary,
   shouldFetchViewport,
+  zoneMatchesFilter,
+  zoneMatchesSearch,
 } from "../leaflet-map.utils";
 
 function metersToLatDelta(meters: number): number {
@@ -73,5 +81,96 @@ describe("leaflet-map.utils", () => {
     const distance = distanceBetweenViewportCentersMeters(baseViewport, baseViewport);
 
     expect(distance).toBeLessThan(0.001);
+  });
+
+  it("maps crime levels into discrete severity buckets", () => {
+    expect(getZoneSeverity(null)).toBe("unknown");
+    expect(getZoneSeverity(1.8)).toBe("safe");
+    expect(getZoneSeverity(3.1)).toBe("moderate");
+    expect(getZoneSeverity(4.2)).toBe("danger");
+  });
+
+  it("matches zones by filter and search query", () => {
+    const zone: ZoneDTO = {
+      id: "zone-1",
+      name: "Avenida Central",
+      geometry: {
+        type: "Point",
+        coordinates: [-77.1, -12.1],
+        radiusM: 150,
+      },
+      crimeLevel: 4.3,
+      createdBy: "user-1",
+      createdAt: "2026-03-01T00:00:00.000Z",
+    };
+
+    expect(zoneMatchesFilter(zone, "danger")).toBe(true);
+    expect(zoneMatchesFilter(zone, "safe")).toBe(false);
+    expect(zoneMatchesSearch(zone, "central")).toBe(true);
+    expect(zoneMatchesSearch(zone, "paradero")).toBe(false);
+  });
+
+  it("computes zone centers for point and polygon geometries", () => {
+    expect(
+      getZoneCenter({
+        type: "Point",
+        coordinates: [-77.0428, -12.0464],
+        radiusM: 150,
+      }),
+    ).toEqual([-12.0464, -77.0428]);
+
+    expect(
+      getZoneCenter({
+        type: "Polygon",
+        coordinates: [
+          [
+            [-77.04, -12.04],
+            [-77.02, -12.04],
+            [-77.02, -12.02],
+            [-77.04, -12.02],
+            [-77.04, -12.04],
+          ],
+        ],
+      }),
+    ).toEqual([
+      expect.closeTo(-12.032, 10),
+      expect.closeTo(-77.032, 10),
+    ]);
+  });
+
+  it("derives discrete heat colors and a day-stronger trend summary", () => {
+    expect(getCrimeHeatColor(1.4)).toBe("#00a657");
+    expect(getCrimeHeatColor(3.1)).toBe("#ffb95c");
+    expect(getCrimeHeatColor(4.5)).toBe("#93000a");
+
+    const detail: ZoneDetailDTO = {
+      zone: {
+        id: "zone-1",
+        name: "Avenida Central",
+        geometry: {
+          type: "Point",
+          coordinates: [-77.0428, -12.0464],
+          radiusM: 150,
+        },
+        crimeLevel: 3.2,
+        createdBy: "user-1",
+        createdAt: "2026-03-20T10:00:00.000Z",
+      },
+      aggregates: [
+        { categorySlug: "crime", timeSegment: "morning", ratingsCount: 3, avgScore: 1.4 },
+        { categorySlug: "lighting", timeSegment: "morning", ratingsCount: 3, avgScore: 4.8 },
+        { categorySlug: "crime", timeSegment: "afternoon", ratingsCount: 3, avgScore: 2.1 },
+        { categorySlug: "foot_traffic", timeSegment: "afternoon", ratingsCount: 3, avgScore: 4.3 },
+        { categorySlug: "crime", timeSegment: "night", ratingsCount: 3, avgScore: 4.4 },
+        { categorySlug: "lighting", timeSegment: "night", ratingsCount: 3, avgScore: 2.6 },
+        { categorySlug: "crime", timeSegment: "early_morning", ratingsCount: 3, avgScore: 4.8 },
+      ],
+      comments: [],
+    };
+
+    expect(getZoneTrendSummary(detail)).toEqual({
+      direction: "day_stronger",
+      progressPercent: 60,
+    });
   });
 });

@@ -13,10 +13,17 @@ import type { LatLngPosition, ViewportQuery } from "./leaflet-map.types";
 import {
   getCrimeHeatColor,
   getCrimeHeatIntensity,
+  getZoneSeverity,
   toViewportQuery,
 } from "./leaflet-map.utils";
 
 const USER_LOCATION_ZOOM = 16;
+const DRAFT_ZONE_STROKE = "#ff5352";
+const DRAFT_ZONE_FILL = "#ff7a74";
+const DRAFT_ZONE_CENTER = "#ffcb8d";
+const POLYGON_OUTLINE = "#393939";
+const USER_LOCATION_OUTER = "#4ae183";
+const USER_LOCATION_CORE = "#ffcb8d";
 
 type Position = [number, number];
 
@@ -58,6 +65,23 @@ export function RecenterOnUserPosition({ position }: { position: Position }) {
 
   useEffect(() => {
     map.setView(position, USER_LOCATION_ZOOM, { animate: true });
+  }, [map, position]);
+
+  return null;
+}
+
+export function FocusMapTarget({ position }: { position: Position | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!position) {
+      return;
+    }
+
+    map.flyTo(position, Math.max(map.getZoom(), 15), {
+      animate: true,
+      duration: 0.8,
+    });
   }, [map, position]);
 
   return null;
@@ -110,9 +134,9 @@ export function ZoneCreationDraftLayer({
         center={pointCenter}
         radius={pointRadiusM}
         pathOptions={{
-          color: "#1d4ed8",
-          fillColor: "#60a5fa",
-          fillOpacity: 0.24,
+          color: DRAFT_ZONE_STROKE,
+          fillColor: DRAFT_ZONE_FILL,
+          fillOpacity: 0.28,
           weight: 2,
         }}
       />
@@ -121,7 +145,7 @@ export function ZoneCreationDraftLayer({
         radius={5}
         pathOptions={{
           color: "#ffffff",
-          fillColor: "#1d4ed8",
+          fillColor: DRAFT_ZONE_CENTER,
           fillOpacity: 1,
           weight: 2,
         }}
@@ -134,6 +158,7 @@ type ZoneLayerProps = {
   zones: ZoneDTO[];
   translations: MapTranslations;
   onZoneSelect?: (zoneId: string) => void;
+  selectedZoneId?: string | null;
 };
 
 type PointZoneDTO = ZoneDTO & {
@@ -166,12 +191,14 @@ function PointZone({
   heatIntensity,
   translations,
   onZoneSelect,
+  selectedZoneId,
 }: {
   zone: PointZoneDTO;
   heatColor: string;
   heatIntensity: number;
   translations: MapTranslations;
   onZoneSelect?: (zoneId: string) => void;
+  selectedZoneId?: string | null;
 }) {
   const [longitude, latitude] = zone.geometry.coordinates;
   const center: Position = [latitude, longitude];
@@ -179,6 +206,9 @@ function PointZone({
   const radiusM = zone.geometry.radiusM;
   const outerRadiusM = Math.round(radiusM * 1.6);
   const coreRadiusM = Math.max(18, Math.round(radiusM * 0.2));
+  const isSelected = zone.id === selectedZoneId;
+  const severity = getZoneSeverity(zone.crimeLevel);
+  const midFillOpacity = severity === "danger" ? 0.28 : severity === "moderate" ? 0.22 : 0.18;
 
   return (
     <Fragment key={zone.id}>
@@ -190,7 +220,7 @@ function PointZone({
         pathOptions={{
           stroke: false,
           fillColor: heatColor,
-          fillOpacity: 0.07 * heatIntensity,
+          fillOpacity: (severity === "danger" ? 0.12 : 0.09) * heatIntensity,
         }}
       />
       <Circle
@@ -207,9 +237,11 @@ function PointZone({
             : undefined
         }
         pathOptions={{
-          stroke: false,
+          color: isSelected ? "#e5e2e1" : heatColor,
+          stroke: isSelected,
           fillColor: heatColor,
-          fillOpacity: 0.2 * heatIntensity,
+          fillOpacity: midFillOpacity * heatIntensity,
+          weight: isSelected ? 1.2 : 0,
         }}
       >
         <Tooltip direction="top" offset={[0, -8]}>
@@ -224,7 +256,7 @@ function PointZone({
         pathOptions={{
           stroke: false,
           fillColor: heatColor,
-          fillOpacity: 0.45 * heatIntensity,
+          fillOpacity: (severity === "safe" ? 0.78 : 0.52) * heatIntensity,
         }}
       />
       <CircleMarker
@@ -235,7 +267,7 @@ function PointZone({
           color: "#ffffff",
           fillColor: heatColor,
           fillOpacity: 0.95,
-          weight: 1.5,
+          weight: isSelected ? 2.4 : 1.5,
         }}
       />
     </Fragment>
@@ -247,27 +279,31 @@ function PolygonZone({
   heatColor,
   translations,
   onZoneSelect,
+  selectedZoneId,
 }: {
   zone: PolygonZoneDTO;
   heatColor: string;
   translations: MapTranslations;
   onZoneSelect?: (zoneId: string) => void;
+  selectedZoneId?: string | null;
 }) {
   const outerRing = zone.geometry.coordinates[0];
   const positions: Position[] = outerRing.map(([longitude, latitude]) => [
     latitude,
     longitude,
   ]);
+  const isSelected = zone.id === selectedZoneId;
+  const severity = getZoneSeverity(zone.crimeLevel);
 
   return (
     <Polygon
       key={zone.id}
       positions={positions}
       pathOptions={{
-        color: "#0f172a",
+        color: isSelected ? "#e5e2e1" : POLYGON_OUTLINE,
         fillColor: heatColor,
-        fillOpacity: 0.35,
-        weight: 1.5,
+        fillOpacity: severity === "danger" ? 0.42 : severity === "moderate" ? 0.34 : 0.28,
+        weight: isSelected ? 2 : 1.5,
       }}
       eventHandlers={
         onZoneSelect
@@ -284,7 +320,12 @@ function PolygonZone({
   );
 }
 
-export function ZoneLayer({ zones, translations, onZoneSelect }: ZoneLayerProps) {
+export function ZoneLayer({
+  zones,
+  translations,
+  onZoneSelect,
+  selectedZoneId,
+}: ZoneLayerProps) {
   return (
     <>
       {zones.map((zone) => {
@@ -300,6 +341,7 @@ export function ZoneLayer({ zones, translations, onZoneSelect }: ZoneLayerProps)
               heatIntensity={heatIntensity}
               translations={translations}
               onZoneSelect={onZoneSelect}
+              selectedZoneId={selectedZoneId}
             />
           );
         }
@@ -315,6 +357,7 @@ export function ZoneLayer({ zones, translations, onZoneSelect }: ZoneLayerProps)
             heatColor={heatColor}
             translations={translations}
             onZoneSelect={onZoneSelect}
+            selectedZoneId={selectedZoneId}
           />
         );
       })}
@@ -336,9 +379,9 @@ export function UserLocationLayer({
         radius={14}
         interactive={false}
         pathOptions={{
-          color: "#3b82f6",
-          fillColor: "#3b82f6",
-          fillOpacity: 0.2,
+          color: USER_LOCATION_OUTER,
+          fillColor: USER_LOCATION_OUTER,
+          fillOpacity: 0.22,
           weight: 0,
         }}
       />
@@ -347,7 +390,7 @@ export function UserLocationLayer({
         radius={6}
         pathOptions={{
           color: "#ffffff",
-          fillColor: "#2563eb",
+          fillColor: USER_LOCATION_CORE,
           fillOpacity: 1,
           weight: 2,
         }}

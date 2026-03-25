@@ -126,7 +126,7 @@ export default function AuthAvatarMenu({
         type="button"
         onClick={() => setIsOpen((value) => !value)}
         aria-label={translations.openMenu}
-        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-surface text-sm font-semibold text-foreground shadow-md transition-colors hover:bg-surface-solid"
+        className="glass-panel ghost-outline flex h-11 w-11 items-center justify-center overflow-hidden rounded-full text-sm font-semibold text-foreground transition-colors hover:bg-surface-bright/70"
       >
         {currentUser.avatarUrl ? (
           <Image
@@ -142,13 +142,13 @@ export default function AuthAvatarMenu({
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 z-[1100] mt-2 w-52 rounded-xl border border-border bg-surface-solid p-2 text-sm text-foreground shadow-lg">
+        <div className="glass-panel ghost-outline absolute right-0 z-[1100] mt-2 w-56 rounded-[1.1rem] p-2 text-sm text-foreground">
           {currentUser.isAnonymous ? (
             <button
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isPending}
-              className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-high disabled:cursor-not-allowed disabled:opacity-50"
             >
               {translations.signInWithGoogle}
             </button>
@@ -160,7 +160,7 @@ export default function AuthAvatarMenu({
                   onSetCreateMode(!isCreateMode);
                   setIsOpen(false);
                 }}
-                className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-muted"
+                className="w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-high"
               >
                 {isCreateMode
                   ? translations.exitCreateZone
@@ -170,7 +170,7 @@ export default function AuthAvatarMenu({
                 type="button"
                 onClick={handleSignOut}
                 disabled={isPending}
-                className="mt-1 w-full rounded-lg px-3 py-2 text-left text-red-700 transition-colors hover:bg-danger disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-1 w-full rounded-xl px-3 py-2.5 text-left text-danger-foreground transition-colors hover:bg-danger disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {translations.signOut}
               </button>

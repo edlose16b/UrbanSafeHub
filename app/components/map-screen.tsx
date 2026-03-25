@@ -5,11 +5,28 @@ import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
 import type { AuthMenuTranslations } from "./auth-avatar-menu";
 
 export type MapTranslations = {
+  projectName: string;
   switchToDarkMapStyle: string;
   switchToLightMapStyle: string;
   darkModeTitle: string;
   lightModeTitle: string;
   locateUserTitle: string;
+  searchZonesLabel: string;
+  searchZonesPlaceholder: string;
+  searchZonesEmpty: string;
+  searchZonesResultsTitle: string;
+  filterToggleTitle: string;
+  filterAll: string;
+  filterDanger: string;
+  filterModerate: string;
+  filterSafe: string;
+  legendCriticalRisk: string;
+  legendModerateAlert: string;
+  legendVerifiedSafe: string;
+  mobileNavMap: string;
+  mobileNavFilter: string;
+  mobileNavLegend: string;
+  mobileNavTheme: string;
   locationDeniedMessage: string;
   locationUnavailableMessage: string;
   userLocationLabel: string;
@@ -72,6 +89,17 @@ export type MapTranslations = {
   zoneDetailSegmentNight: string;
   zoneDetailSegmentEarlyMorning: string;
   zoneDetailSegmentGeneral: string;
+  zoneDetailStatusSafe: string;
+  zoneDetailStatusModerate: string;
+  zoneDetailStatusDanger: string;
+  zoneDetailStatusUnknown: string;
+  zoneDetailProfileTitle: string;
+  zoneDetailProfileDayStronger: string;
+  zoneDetailProfileNightStronger: string;
+  zoneDetailProfileSteady: string;
+  zoneDetailProfileInsufficientData: string;
+  zoneDetailCommentsCountLabel: string;
+  zoneDetailRatingsCountLabel: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

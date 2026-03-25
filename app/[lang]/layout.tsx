@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Inter, Public_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import "leaflet/dist/leaflet.css";
 import ThemeProvider from "../components/theme-provider";
@@ -7,8 +7,13 @@ import "../globals.css";
 import { hasLocale, SUPPORTED_LOCALES } from "../i18n/config";
 import { getDictionary } from "../i18n/get-dictionary";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
   subsets: ["latin"],
 });
 
@@ -62,7 +67,7 @@ export default async function RootLayout({
   return (
     <html
       lang={lang}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${publicSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="h-full overflow-hidden bg-background text-foreground">

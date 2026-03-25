@@ -1,8 +1,14 @@
 import { clampRadiusKm } from "@/lib/zones/utils/number";
+import type { ZoneGeometry } from "@/lib/zones/domain/zone";
+import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
+import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import type { Map as LeafletMap } from "leaflet";
 import type { LocationStatus, ViewportQuery } from "./leaflet-map.types";
 
-const NO_CRIME_DATA_COLOR = "#94a3b8";
+const NO_CRIME_DATA_COLOR = "#7f8a93";
+const SAFE_COLOR = "#00a657";
+const MODERATE_COLOR = "#ffb95c";
+const DANGER_COLOR = "#93000a";
 const EARTH_RADIUS_METERS = 6_371_000;
 
 export const MIN_CENTER_MOVEMENT_METERS = 100;
@@ -10,9 +16,18 @@ export const CENTER_MOVEMENT_RADIUS_RATIO = 0.2;
 export const ZOOM_RADIUS_CHANGE_RATIO = 0.15;
 const FLOATING_POINT_EPSILON = 1e-9;
 
-function toHex(value: number): string {
-  return value.toString(16).padStart(2, "0");
-}
+export type ZoneSeverity = "unknown" | "safe" | "moderate" | "danger";
+export type ZoneFilterKey = "all" | ZoneSeverity;
+export type ZoneTrendDirection =
+  | "insufficient_data"
+  | "steady"
+  | "day_stronger"
+  | "night_stronger";
+
+export type ZoneTrendSummary = {
+  direction: ZoneTrendDirection;
+  progressPercent: number;
+};
 
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
@@ -35,26 +50,166 @@ export function getInitialLocationStatus(): LocationStatus {
 }
 
 export function getCrimeHeatColor(crimeLevel: number | null): string {
-  if (crimeLevel === null) {
-    return NO_CRIME_DATA_COLOR;
+  const severity = getZoneSeverity(crimeLevel);
+  if (severity === "safe") {
+    return SAFE_COLOR;
   }
 
-  const normalized = Math.max(1, Math.min(5, crimeLevel));
-  const ratio = (normalized - 1) / 4;
-  const red = Math.round(239 * ratio + 34 * (1 - ratio));
-  const green = Math.round(68 * ratio + 197 * (1 - ratio));
-  const blue = Math.round(68 * ratio + 94 * (1 - ratio));
+  if (severity === "moderate") {
+    return MODERATE_COLOR;
+  }
 
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+  if (severity === "danger") {
+    return DANGER_COLOR;
+  }
+
+  return NO_CRIME_DATA_COLOR;
 }
 
 export function getCrimeHeatIntensity(crimeLevel: number | null): number {
-  if (crimeLevel === null) {
-    return 0.45;
+  const severity = getZoneSeverity(crimeLevel);
+  if (severity === "danger") {
+    return 1;
   }
 
-  const normalized = Math.max(1, Math.min(5, crimeLevel));
-  return 0.35 + ((normalized - 1) / 4) * 0.65;
+  if (severity === "moderate") {
+    return 0.78;
+  }
+
+  if (severity === "safe") {
+    return 0.72;
+  }
+
+  return 0.5;
+}
+
+export function getZoneSeverity(crimeLevel: number | null): ZoneSeverity {
+  if (crimeLevel === null) {
+    return "unknown";
+  }
+
+  if (crimeLevel >= 4) {
+    return "danger";
+  }
+
+  if (crimeLevel > 2) {
+    return "moderate";
+  }
+
+  return "safe";
+}
+
+export function zoneMatchesFilter(zone: ZoneDTO, filterKey: ZoneFilterKey): boolean {
+  if (filterKey === "all") {
+    return true;
+  }
+
+  return getZoneSeverity(zone.crimeLevel) === filterKey;
+}
+
+export function zoneMatchesSearch(zone: ZoneDTO, rawQuery: string): boolean {
+  const normalizedQuery = rawQuery.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return zone.name.toLowerCase().includes(normalizedQuery);
+}
+
+export function getZoneCenter(geometry: ZoneGeometry): [number, number] {
+  if (geometry.type === "Point") {
+    const [longitude, latitude] = geometry.coordinates;
+    return [latitude, longitude];
+  }
+
+  const ring = geometry.coordinates[0] ?? [];
+  if (ring.length === 0) {
+    return [0, 0];
+  }
+
+  const sum = ring.reduce(
+    (accumulator, [longitude, latitude]) => ({
+      latitude: accumulator.latitude + latitude,
+      longitude: accumulator.longitude + longitude,
+    }),
+    { latitude: 0, longitude: 0 },
+  );
+
+  return [sum.latitude / ring.length, sum.longitude / ring.length];
+}
+
+function getSegmentSafetyScore(detail: ZoneDetailDTO, segmentKey: string): number | null {
+  const scores = detail.aggregates
+    .filter((aggregate) => aggregate.timeSegment === segmentKey && aggregate.avgScore !== null)
+    .map((aggregate) => {
+      if (aggregate.categorySlug === "crime") {
+        return 6 - (aggregate.avgScore ?? 0);
+      }
+
+      return aggregate.avgScore ?? 0;
+    });
+
+  if (scores.length === 0) {
+    return null;
+  }
+
+  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+}
+
+function clampPercent(value: number): number {
+  return Math.max(12, Math.min(100, Math.round(value)));
+}
+
+export function getZoneTrendSummary(detail: ZoneDetailDTO): ZoneTrendSummary {
+  const dayScores = [
+    getSegmentSafetyScore(detail, "morning"),
+    getSegmentSafetyScore(detail, "afternoon"),
+  ].filter((value): value is number => value !== null);
+  const nightScores = [
+    getSegmentSafetyScore(detail, "night"),
+    getSegmentSafetyScore(detail, "early_morning"),
+  ].filter((value): value is number => value !== null);
+  const allScores = [...dayScores, ...nightScores];
+
+  if (allScores.length === 0) {
+    return {
+      direction: "insufficient_data",
+      progressPercent: 22,
+    };
+  }
+
+  const overallAverage = allScores.reduce((sum, score) => sum + score, 0) / allScores.length;
+  const progressPercent = clampPercent((overallAverage / 5) * 100);
+
+  if (dayScores.length === 0 || nightScores.length === 0) {
+    return {
+      direction: "steady",
+      progressPercent,
+    };
+  }
+
+  const dayAverage = dayScores.reduce((sum, score) => sum + score, 0) / dayScores.length;
+  const nightAverage = nightScores.reduce((sum, score) => sum + score, 0) / nightScores.length;
+  const delta = dayAverage - nightAverage;
+
+  if (delta >= 0.35) {
+    return {
+      direction: "day_stronger",
+      progressPercent,
+    };
+  }
+
+  if (delta <= -0.35) {
+    return {
+      direction: "night_stronger",
+      progressPercent,
+    };
+  }
+
+  return {
+    direction: "steady",
+    progressPercent,
+  };
 }
 
 export function distanceBetweenViewportCentersMeters(

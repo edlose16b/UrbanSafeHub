@@ -2,7 +2,6 @@ import { Fragment, useEffect } from "react";
 import {
   Circle,
   CircleMarker,
-  Polyline,
   Polygon,
   Tooltip,
   useMap,
@@ -10,7 +9,7 @@ import {
 } from "react-leaflet";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { MapTranslations } from "./map-screen";
-import type { DrawMode, LatLngPosition, ViewportQuery } from "./leaflet-map.types";
+import type { LatLngPosition, ViewportQuery } from "./leaflet-map.types";
 import {
   getCrimeHeatColor,
   getCrimeHeatIntensity,
@@ -88,94 +87,45 @@ export function ZoneCreationInteractionLayer({
 
 type ZoneCreationDraftLayerProps = {
   canCreate: boolean;
-  drawMode: DrawMode;
   pointCenter: LatLngPosition | null;
   pointRadiusM: number;
-  polygonVertices: LatLngPosition[];
 };
 
 export function ZoneCreationDraftLayer({
   canCreate,
-  drawMode,
   pointCenter,
   pointRadiusM,
-  polygonVertices,
 }: ZoneCreationDraftLayerProps) {
   if (!canCreate) {
     return null;
   }
 
-  if (drawMode === "Point") {
-    if (!pointCenter) {
-      return null;
-    }
-
-    return (
-      <>
-        <Circle
-          center={pointCenter}
-          radius={pointRadiusM}
-          pathOptions={{
-            color: "#1d4ed8",
-            fillColor: "#60a5fa",
-            fillOpacity: 0.24,
-            weight: 2,
-          }}
-        />
-        <CircleMarker
-          center={pointCenter}
-          radius={5}
-          pathOptions={{
-            color: "#ffffff",
-            fillColor: "#1d4ed8",
-            fillOpacity: 1,
-            weight: 2,
-          }}
-        />
-      </>
-    );
-  }
-
-  if (polygonVertices.length === 0) {
+  if (!pointCenter) {
     return null;
   }
 
-  const shouldDrawPolygon = polygonVertices.length >= 3;
-
   return (
     <>
-      {shouldDrawPolygon ? (
-        <Polygon
-          positions={polygonVertices}
-          pathOptions={{
-            color: "#0f766e",
-            fillColor: "#14b8a6",
-            fillOpacity: 0.25,
-            weight: 2,
-          }}
-        />
-      ) : (
-        <Polyline
-          positions={polygonVertices}
-          pathOptions={{
-            color: "#0f766e",
-            weight: 2.5,
-          }}
-        />
-      )}
-      {polygonVertices.map((vertex, index) => (
-        <CircleMarker
-          key={`zone-draft-vertex-${index}-${vertex[0]}-${vertex[1]}`}
-          center={vertex}
-          radius={4}
-          pathOptions={{
-            color: "#ffffff",
-            fillColor: "#0f766e",
-            fillOpacity: 1,
-            weight: 1.5,
-          }}
-        />
-      ))}
+      <Circle
+        center={pointCenter}
+        radius={pointRadiusM}
+        pathOptions={{
+          color: "#1d4ed8",
+          fillColor: "#60a5fa",
+          fillOpacity: 0.24,
+          weight: 2,
+        }}
+      />
+      <CircleMarker
+        center={pointCenter}
+        radius={5}
+        pathOptions={{
+          color: "#ffffff",
+          fillColor: "#1d4ed8",
+          fillOpacity: 1,
+          weight: 2,
+        }}
+      />
     </>
   );
 }

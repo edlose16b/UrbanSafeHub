@@ -17,14 +17,16 @@ create table if not exists public.rating_categories (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint rating_categories_slug_check
-    check (slug in ('crime', 'lighting', 'foot_traffic'))
+    check (slug in ('crime', 'lighting', 'foot_traffic', 'vigilance', 'cctv'))
 );
 
 insert into public.rating_categories (slug, label, requires_time_segment)
 values
   ('crime', 'Crime level', true),
   ('lighting', 'Lighting', false),
-  ('foot_traffic', 'Foot traffic', true)
+  ('foot_traffic', 'Foot traffic', true),
+  ('vigilance', 'Vigilance', true),
+  ('cctv', 'CCTV', false)
 on conflict (slug)
 do update set
   label = excluded.label,

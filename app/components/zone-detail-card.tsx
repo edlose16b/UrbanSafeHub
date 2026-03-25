@@ -5,7 +5,13 @@ import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { SEGMENT_ORDER, type SegmentKey } from "@/lib/zones/rating-time-segments";
 import type { MapTranslations } from "./map-screen";
 
-const RATING_CATEGORY_ORDER = ["crime", "lighting", "foot_traffic"] as const;
+const RATING_CATEGORY_ORDER = [
+  "crime",
+  "lighting",
+  "foot_traffic",
+  "vigilance",
+  "cctv",
+] as const;
 
 function formatDateLabel(isoString: string, locale: string): string {
   const parsed = new Date(isoString);
@@ -38,6 +44,14 @@ function resolveCategoryLabel(categorySlug: string, translations: MapTranslation
 
   if (categorySlug === "foot_traffic") {
     return translations.zoneDetailCategoryFootTraffic;
+  }
+
+  if (categorySlug === "vigilance") {
+    return translations.zoneDetailCategoryVigilance;
+  }
+
+  if (categorySlug === "cctv") {
+    return translations.zoneDetailCategoryCctv;
   }
 
   return categorySlug;
@@ -105,6 +119,17 @@ function buildAggregateValueMap(detail: ZoneDetailDTO): Map<string, string> {
   return valueByCell;
 }
 
+function resolveCategoryOrder(detail: ZoneDetailDTO): string[] {
+  const discoveredCategories = new Set(detail.aggregates.map((aggregate) => aggregate.categorySlug));
+
+  return [
+    ...RATING_CATEGORY_ORDER,
+    ...Array.from(discoveredCategories).filter(
+      (categorySlug) => !RATING_CATEGORY_ORDER.includes(categorySlug as never),
+    ),
+  ];
+}
+
 export type ZoneDetailCardProps = {
   lang: string;
   detail: ZoneDetailDTO | null;
@@ -156,6 +181,8 @@ export function ZoneDetailCard({
 
     const valueByCell = buildAggregateValueMap(detail);
 
+    const categoryOrder = resolveCategoryOrder(detail);
+
     const crimeBlock = (
       <CategoryScoreBlock
         categorySlug="crime"
@@ -165,7 +192,7 @@ export function ZoneDetailCard({
       />
     );
 
-    const otherCategoryBlocks = RATING_CATEGORY_ORDER.filter((slug) => slug !== "crime").map(
+    const otherCategoryBlocks = categoryOrder.filter((slug) => slug !== "crime").map(
       (categorySlug) => (
         <CategoryScoreBlock
           key={categorySlug}

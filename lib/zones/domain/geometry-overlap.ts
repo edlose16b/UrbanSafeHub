@@ -281,8 +281,14 @@ export function zoneGeometriesTouchOrIntersect(
   }
 
   if (firstGeometry.type === "circle") {
-    return circleAndPolygonTouchOrIntersect(firstGeometry, secondGeometry);
+    return secondGeometry.type === "polygon"
+      ? circleAndPolygonTouchOrIntersect(firstGeometry, secondGeometry)
+      : false;
   }
 
-  return circleAndPolygonTouchOrIntersect(secondGeometry, firstGeometry);
+  if (firstGeometry.type === "polygon" && secondGeometry.type === "circle") {
+    return circleAndPolygonTouchOrIntersect(secondGeometry, firstGeometry);
+  }
+
+  return false;
 }

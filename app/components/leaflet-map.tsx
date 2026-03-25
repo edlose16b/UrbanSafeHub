@@ -28,7 +28,7 @@ import {
   useZonesByViewport,
 } from "./leaflet-map.hooks";
 import type { LeafletMapProps } from "./leaflet-map.types";
-import { MAX_POLYGON_DIAMETER_M, POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
+import { POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
 import { ZoneDetailCard } from "./zone-detail-card";
 
 function LocationNotice({
@@ -73,18 +73,14 @@ type ZoneCreationPanelProps = {
   isVisible: boolean;
   hasAcceptedTerms: boolean;
   zoneName: string;
-  drawMode: "Point" | "Polygon";
   pointRadiusM: number;
-  polygonVertexCount: number;
   pointCenterReady: boolean;
   isSubmitting: boolean;
   submitError: string | null;
   submitSuccess: string | null;
   onAcceptedTermsChange: (checked: boolean) => void;
   onNameChange: (nextName: string) => void;
-  onModeChange: (mode: "Point" | "Polygon") => void;
   onRadiusChange: (value: number) => void;
-  onUndoPolygonPoint: () => void;
   onClearDraft: () => void;
   onSubmit: () => Promise<boolean>;
   translations: LeafletMapProps["translations"];
@@ -94,18 +90,14 @@ function ZoneCreationPanel({
   isVisible,
   hasAcceptedTerms,
   zoneName,
-  drawMode,
   pointRadiusM,
-  polygonVertexCount,
   pointCenterReady,
   isSubmitting,
   submitError,
   submitSuccess,
   onAcceptedTermsChange,
   onNameChange,
-  onModeChange,
   onRadiusChange,
-  onUndoPolygonPoint,
   onClearDraft,
   onSubmit,
   translations,
@@ -114,16 +106,6 @@ function ZoneCreationPanel({
     return null;
   }
 
-  const polygonPointsLabel = translations.zoneCreatePolygonPoints.replace(
-    "{count}",
-    String(polygonVertexCount),
-  );
-  const polygonHint = translations.zoneCreatePolygonHint.replace(
-    "{maxM}",
-    String(MAX_POLYGON_DIAMETER_M),
-  );
-  const shouldDisableUndo = polygonVertexCount === 0;
-  const isPointMode = drawMode === "Point";
   const isSubmitDisabled = isSubmitting || !zoneName.trim() || !hasAcceptedTerms;
 
   return (
@@ -164,87 +146,47 @@ function ZoneCreationPanel({
 
       <div className="mt-3">
         <p className="mb-1 text-xs font-medium">{translations.zoneCreateTypeLabel}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onModeChange("Point")}
-            className={`rounded-lg border px-3 py-2 text-xs font-medium ${
-              isPointMode
-                ? "border-blue-700 bg-blue-50 text-blue-900"
-                : "border-border-muted bg-surface-muted text-text-muted"
-            }`}
-          >
-            {translations.zoneCreateTypeRadius}
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange("Polygon")}
-            className={`rounded-lg border px-3 py-2 text-xs font-medium ${
-              !isPointMode
-                ? "border-teal-700 bg-teal-50 text-teal-900"
-                : "border-border-muted bg-surface-muted text-text-muted"
-            }`}
-          >
-            {translations.zoneCreateTypePolygon}
-          </button>
+        <div className="rounded-lg border border-blue-700 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-900">
+          {translations.zoneCreateTypeRadius}
         </div>
       </div>
 
-      {isPointMode ? (
-        <>
-          <div className="mt-3">
-            <p className="mb-1 text-xs font-medium">{translations.zoneCreateRadiusLabel}</p>
-            <div className="grid grid-cols-3 gap-2">
-              {POINT_RADIUS_OPTIONS_M.map((radiusOption) => (
-                <button
-                  key={radiusOption}
-                  type="button"
-                  onClick={() => onRadiusChange(radiusOption)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-medium ${
-                    pointRadiusM === radiusOption
-                      ? "border-blue-700 bg-blue-50 text-blue-900"
-                      : "border-border-muted bg-surface-muted text-text-muted"
-                  }`}
-                  aria-pressed={pointRadiusM === radiusOption}
-                >
-                  {radiusOption}m
-                </button>
-              ))}
-            </div>
-            <span className="mt-1 block text-xs text-text-secondary">
-              {translations.zoneCreateRadiusHint}
-            </span>
-          </div>
-          <p className="mt-3 text-xs text-text-muted">
-            {pointCenterReady
-              ? translations.zoneCreatePointReady
-              : translations.zoneCreatePointHint}
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="mt-3 text-xs text-text-muted">{polygonHint}</p>
-          <p className="mt-1 text-xs font-medium text-text-muted">{polygonPointsLabel}</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3">
+        <p className="mb-1 text-xs font-medium">{translations.zoneCreateRadiusLabel}</p>
+        <div className="grid grid-cols-3 gap-2">
+          {POINT_RADIUS_OPTIONS_M.map((radiusOption) => (
             <button
+              key={radiusOption}
               type="button"
-              onClick={onUndoPolygonPoint}
-              disabled={shouldDisableUndo}
-              className="rounded-lg border border-border-muted bg-surface-muted px-3 py-2 text-xs font-medium text-text-muted disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => onRadiusChange(radiusOption)}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                pointRadiusM === radiusOption
+                  ? "border-blue-700 bg-blue-50 text-blue-900"
+                  : "border-border-muted bg-surface-muted text-text-muted"
+              }`}
+              aria-pressed={pointRadiusM === radiusOption}
             >
-              {translations.zoneCreateUndoPoint}
+              {radiusOption}m
             </button>
-            <button
-              type="button"
-              onClick={onClearDraft}
-              disabled={shouldDisableUndo}
-              className="rounded-lg border border-border-muted bg-surface-muted px-3 py-2 text-xs font-medium text-text-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {translations.zoneCreateClearDraft}
-            </button>
-          </div>
-        </>
-      )}
+          ))}
+        </div>
+        <span className="mt-1 block text-xs text-text-secondary">
+          {translations.zoneCreateRadiusHint}
+        </span>
+      </div>
+      <p className="mt-3 text-xs text-text-muted">
+        {pointCenterReady
+          ? translations.zoneCreatePointReady
+          : translations.zoneCreatePointHint}
+      </p>
+      <button
+        type="button"
+        onClick={onClearDraft}
+        disabled={!pointCenterReady}
+        className="mt-3 w-full rounded-lg border border-border-muted bg-surface-muted px-3 py-2 text-xs font-medium text-text-muted disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {translations.zoneCreateClearDraft}
+      </button>
 
       {submitError ? (
         <p
@@ -298,21 +240,17 @@ export default function LeafletMap({
   const isCreatePanelVisible = isAuthenticated && isCreateMode;
   const effectiveCanCreateZone = isCreatePanelVisible && hasAcceptedTerms;
   const {
-    drawMode,
     zoneName,
     pointRadiusM,
     pointCenter,
-    polygonVertices,
     isSubmitting,
     submitError,
     submitSuccess,
     setZoneName,
     onPointRadiusChange,
-    handleDrawModeChange,
     handleMapClick,
     clearGeometry,
     resetCreationState,
-    removeLastPolygonVertex,
     submit,
   } = useZoneCreation({
     canCreate: effectiveCanCreateZone,
@@ -369,18 +307,14 @@ export default function LeafletMap({
         isVisible={isCreatePanelVisible}
         hasAcceptedTerms={hasAcceptedTerms}
         zoneName={zoneName}
-        drawMode={drawMode}
         pointRadiusM={pointRadiusM}
-        polygonVertexCount={polygonVertices.length}
         pointCenterReady={pointCenter !== null}
         isSubmitting={isSubmitting}
         submitError={submitError}
         submitSuccess={submitSuccess}
         onAcceptedTermsChange={handleAcceptedTermsChange}
         onNameChange={setZoneName}
-        onModeChange={handleDrawModeChange}
         onRadiusChange={onPointRadiusChange}
-        onUndoPolygonPoint={removeLastPolygonVertex}
         onClearDraft={clearGeometry}
         onSubmit={submit}
         translations={translations}
@@ -469,10 +403,8 @@ export default function LeafletMap({
         />
         <ZoneCreationDraftLayer
           canCreate={isCreatePanelVisible}
-          drawMode={drawMode}
           pointCenter={pointCenter}
           pointRadiusM={pointRadiusM}
-          polygonVertices={polygonVertices}
         />
         {userPosition ? (
           <UserLocationLayer

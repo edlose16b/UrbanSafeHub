@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Sahakum",
+    "title": "UrbanSafeHub",
     "description": "Mapa comunitario para compartir y calificar lugares"
   },
   "map": {
@@ -64,6 +64,8 @@
     "zoneDetailCategoryCrime": "Delincuencia",
     "zoneDetailCategoryLighting": "Iluminación",
     "zoneDetailCategoryFootTraffic": "Flujo peatonal",
+    "zoneDetailCategoryVigilance": "Vigilancia",
+    "zoneDetailCategoryCctv": "CCTV",
     "zoneDetailSegmentMorning": "Mañana",
     "zoneDetailSegmentAfternoon": "Tarde",
     "zoneDetailSegmentNight": "Noche",

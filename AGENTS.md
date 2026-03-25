@@ -6,14 +6,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
-## Project
+## Project: UrbanSafeHub
 
 Read PROJECT.md to understand project goals.
 
 ## DB
 
 For Supabase MCP use
-`supabase_sahakum`
+`supabase`
 
 don't need to add migrations for update tables, you can remove table and create new migrations. the BD is under building.
 

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Sahakum",
+    "title": "UrbanSafeHub",
     "description": "Community map to share and rate places"
   },
   "map": {
@@ -64,6 +64,8 @@
     "zoneDetailCategoryCrime": "Crime",
     "zoneDetailCategoryLighting": "Lighting",
     "zoneDetailCategoryFootTraffic": "Foot traffic",
+    "zoneDetailCategoryVigilance": "Vigilance",
+    "zoneDetailCategoryCctv": "CCTV",
     "zoneDetailSegmentMorning": "Morning",
     "zoneDetailSegmentAfternoon": "Afternoon",
     "zoneDetailSegmentNight": "Night",

@@ -65,6 +65,8 @@ export type MapTranslations = {
   zoneDetailCategoryCrime: string;
   zoneDetailCategoryLighting: string;
   zoneDetailCategoryFootTraffic: string;
+  zoneDetailCategoryVigilance: string;
+  zoneDetailCategoryCctv: string;
   zoneDetailSegmentMorning: string;
   zoneDetailSegmentAfternoon: string;
   zoneDetailSegmentNight: string;

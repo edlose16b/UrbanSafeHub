@@ -3,20 +3,10 @@ import { useTheme } from "next-themes";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { zoneGeometriesTouchOrIntersect } from "@/lib/zones/domain/geometry-overlap";
-import {
-  DEFAULT_POINT_RADIUS_M,
-  MAX_POLYGON_DIAMETER_M,
-  POINT_RADIUS_OPTIONS_M,
-} from "@/app/constants/map";
-import { isLatLngVertexSetWithinMaxDiameter } from "@/lib/zones/domain/geo-distance";
-import type { GeoJsonPosition, ZoneGeometry } from "@/lib/zones/domain/zone";
+import { DEFAULT_POINT_RADIUS_M, POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
+import type { ZoneGeometry } from "@/lib/zones/domain/zone";
 import type { MapTranslations } from "./map-screen";
-import type {
-  DrawMode,
-  LatLngPosition,
-  LocationStatus,
-  ViewportQuery,
-} from "./leaflet-map.types";
+import type { LatLngPosition, LocationStatus, ViewportQuery } from "./leaflet-map.types";
 import {
   shouldFetchViewport,
   getInitialLocationStatus,
@@ -244,41 +234,24 @@ export function useZoneCreation({
   translations,
   onZoneCreated,
 }: ZoneCreationHookOptions) {
-  const [drawMode, setDrawMode] = useState<DrawMode>("Point");
   const [zoneName, setZoneName] = useState("");
   const [pointRadiusM, setPointRadiusM] = useState(DEFAULT_POINT_RADIUS_M);
   const [pointCenter, setPointCenter] = useState<LatLngPosition | null>(null);
-  const [polygonVertices, setPolygonVertices] = useState<LatLngPosition[]>([]);
-  const polygonVerticesRef = useRef<LatLngPosition[]>(polygonVertices);
-  polygonVerticesRef.current = polygonVertices;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   const clearGeometry = useCallback(() => {
     setPointCenter(null);
-    setPolygonVertices([]);
   }, []);
 
   const resetCreationState = useCallback(() => {
-    setDrawMode("Point");
     setZoneName("");
     setPointRadiusM(DEFAULT_POINT_RADIUS_M);
     setPointCenter(null);
-    setPolygonVertices([]);
     setSubmitError(null);
     setSubmitSuccess(null);
   }, []);
-
-  const handleDrawModeChange = useCallback(
-    (nextMode: DrawMode) => {
-      setDrawMode(nextMode);
-      clearGeometry();
-      setSubmitError(null);
-      setSubmitSuccess(null);
-    },
-    [clearGeometry],
-  );
 
   const handleMapClick = useCallback(
     (position: LatLngPosition) => {
@@ -288,34 +261,10 @@ export function useZoneCreation({
 
       setSubmitError(null);
       setSubmitSuccess(null);
-
-      if (drawMode === "Point") {
-        setPointCenter(position);
-        return;
-      }
-
-      const nextVertices: LatLngPosition[] = [...polygonVerticesRef.current, position];
-      if (!isLatLngVertexSetWithinMaxDiameter(nextVertices)) {
-        setSubmitError(
-          translations.zoneCreatePolygonDiameterExceeded.replace(
-            "{maxM}",
-            String(MAX_POLYGON_DIAMETER_M),
-          ),
-        );
-        setSubmitSuccess(null);
-        return;
-      }
-
-      setPolygonVertices(nextVertices);
+      setPointCenter(position);
     },
-    [canCreate, drawMode, translations.zoneCreatePolygonDiameterExceeded],
+    [canCreate],
   );
-
-  const removeLastPolygonVertex = useCallback(() => {
-    setPolygonVertices((current) => current.slice(0, -1));
-    setSubmitError(null);
-    setSubmitSuccess(null);
-  }, []);
 
   const onPointRadiusChange = useCallback((value: number) => {
     setPointRadiusM(clampPointRadiusM(value));
@@ -345,45 +294,17 @@ export function useZoneCreation({
 
     let geometry: ZoneGeometry;
 
-    if (drawMode === "Point") {
-      if (!pointCenter) {
-        setSubmitError(translations.zoneCreatePointRequired);
-        setSubmitSuccess(null);
-        return false;
-      }
-
-      geometry = {
-        type: "Point",
-        coordinates: [pointCenter[1], pointCenter[0]],
-        radiusM: pointRadiusM,
-      };
-    } else {
-      if (polygonVertices.length < 3) {
-        setSubmitError(translations.zoneCreatePolygonRequired);
-        setSubmitSuccess(null);
-        return false;
-      }
-
-      if (!isLatLngVertexSetWithinMaxDiameter(polygonVertices)) {
-        setSubmitError(
-          translations.zoneCreatePolygonDiameterExceeded.replace(
-            "{maxM}",
-            String(MAX_POLYGON_DIAMETER_M),
-          ),
-        );
-        setSubmitSuccess(null);
-        return false;
-      }
-
-      const ring: GeoJsonPosition[] = [...polygonVertices, polygonVertices[0]].map(
-        ([lat, lng]): GeoJsonPosition => [lng, lat],
-      );
-
-      geometry = {
-        type: "Polygon",
-        coordinates: [ring],
-      };
+    if (!pointCenter) {
+      setSubmitError(translations.zoneCreatePointRequired);
+      setSubmitSuccess(null);
+      return false;
     }
+
+    geometry = {
+      type: "Point",
+      coordinates: [pointCenter[1], pointCenter[0]],
+      radiusM: pointRadiusM,
+    };
 
     let hasClientConflict = false;
     try {
@@ -426,16 +347,6 @@ export function useZoneCreation({
           return false;
         }
 
-        if (payload.errorCode === "ZONE_POLYGON_DIAMETER_EXCEEDED") {
-          setSubmitError(
-            translations.zoneCreatePolygonDiameterExceeded.replace(
-              "{maxM}",
-              String(MAX_POLYGON_DIAMETER_M),
-            ),
-          );
-          return false;
-        }
-
         setSubmitError(payload.error ?? translations.zoneCreateFailedFallback);
         return false;
       }
@@ -457,18 +368,14 @@ export function useZoneCreation({
   }, [
     canCreate,
     clearGeometry,
-    drawMode,
     existingZones,
     isSubmitting,
     onZoneCreated,
     pointCenter,
     pointRadiusM,
-    polygonVertices,
     translations.zoneCreateFailedFallback,
     translations.zoneCreateNameRequired,
     translations.zoneCreatePointRequired,
-    translations.zoneCreatePolygonDiameterExceeded,
-    translations.zoneCreatePolygonRequired,
     translations.zoneCreateSuccess,
     translations.zoneCreateTermsRequired,
     zoneName,
@@ -476,21 +383,17 @@ export function useZoneCreation({
   ]);
 
   return {
-    drawMode,
     zoneName,
     pointRadiusM,
     pointCenter,
-    polygonVertices,
     isSubmitting,
     submitError,
     submitSuccess,
     setZoneName,
     onPointRadiusChange,
-    handleDrawModeChange,
     handleMapClick,
     clearGeometry,
     resetCreationState,
-    removeLastPolygonVertex,
     submit,
   };
 }

@@ -17,6 +17,4 @@ export type ViewportQuery = {
   radiusKm: number;
 };
 
-export type DrawMode = "Point" | "Polygon";
-
 export type LatLngPosition = [number, number];

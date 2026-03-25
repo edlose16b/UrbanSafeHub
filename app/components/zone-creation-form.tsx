@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
 import type { LeafletMapProps } from "./leaflet-map.types";
 import {
@@ -89,7 +90,7 @@ function resolveScaleLabel(
   }
 }
 
-function ScorePips({
+function ScoreStars({
   value,
 }: {
   value: NullableZoneRatingScore;
@@ -99,12 +100,15 @@ function ScorePips({
       {SCORE_OPTIONS.map((score) => (
         <span
           key={score}
-          className={`h-1.5 rounded-full transition-all ${
+          aria-hidden
+          className={`text-sm leading-none transition-colors ${
             value !== null && score <= value
-              ? "w-4 bg-primary"
-              : "w-2 bg-outline-variant/45"
+              ? "text-primary"
+              : "text-outline-variant/45"
           }`}
-        />
+        >
+          ★
+        </span>
       ))}
     </div>
   );
@@ -114,45 +118,67 @@ function MetricSegmentCard({
   metricLabel,
   segment,
   score,
+  isExpanded,
+  onActivate,
   onScoreChange,
   translations,
 }: {
   metricLabel: string;
   segment: SegmentKey;
   score: NullableZoneRatingScore;
+  isExpanded: boolean;
+  onActivate: () => void;
   onScoreChange: (score: ZoneRatingScore) => void;
   translations: LeafletMapProps["translations"];
 }) {
   const segmentLabel = resolveSegmentLabel(segment, translations);
 
   return (
-    <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-high p-3 text-center">
-      <div className="text-xl">{SEGMENT_EMOJIS[segment]}</div>
-      <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-        {segmentLabel}
-      </p>
-      <ScorePips value={score} />
-      <div className="mt-3 grid grid-cols-5 gap-1">
-        {SCORE_OPTIONS.map((option) => {
-          const isActive = score === option;
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onScoreChange(option)}
-              aria-label={`${metricLabel} · ${segmentLabel} · ${option}`}
-              aria-pressed={isActive}
-              className={`rounded-lg px-0 py-2 text-[11px] font-semibold transition-all ${
-                isActive
-                  ? "border border-primary/40 bg-primary/15 text-primary"
-                  : "bg-surface-lowest text-text-secondary hover:bg-surface-highest"
-              }`}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
+    <div
+      className={`rounded-[1rem] border p-3 text-center transition-colors ${
+        isExpanded
+          ? "border-primary/35 bg-surface-highest"
+          : "border-outline-variant/20 bg-surface-high hover:bg-surface-highest"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onActivate}
+        aria-pressed={isExpanded}
+        className="block w-full"
+      >
+        <div className="text-xl">{SEGMENT_EMOJIS[segment]}</div>
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+          {segmentLabel}
+        </p>
+      </button>
+      <ScoreStars value={score} />
+      {isExpanded ? (
+        <div className="mt-3 grid grid-cols-5 gap-1">
+          {SCORE_OPTIONS.map((option) => {
+            const isActive = score === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onScoreChange(option);
+                }}
+                aria-label={`${metricLabel} · ${segmentLabel} · ${option}`}
+                aria-pressed={isActive}
+                className={`rounded-lg px-0 py-2 text-[11px] font-semibold transition-all ${
+                  isActive
+                    ? "border border-primary/40 bg-primary/15 text-primary"
+                    : "bg-surface-lowest text-text-secondary hover:bg-surface-high"
+                }`}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -168,6 +194,8 @@ function MetricGroup({
   onScoreChange: (segment: SegmentKey, score: ZoneRatingScore) => void;
   translations: LeafletMapProps["translations"];
 }) {
+  const [activeSegment, setActiveSegment] = useState<SegmentKey | null>(null);
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -183,6 +211,8 @@ function MetricGroup({
             metricLabel={title}
             segment={segment}
             score={scores[segment]}
+            isExpanded={activeSegment === segment}
+            onActivate={() => setActiveSegment(segment)}
             onScoreChange={(score) => onScoreChange(segment, score)}
             translations={translations}
           />

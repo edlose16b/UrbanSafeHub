@@ -22,9 +22,6 @@ don't need to add migrations for update tables, you can remove table and create 
 Use the MCP
 
 Title: UrbanSafeHub
-ID: 9236399231032990601
-
-Use a utility like `curl -L` to download the hosted URLs.
 
 ## Rules
 

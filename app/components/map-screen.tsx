@@ -72,6 +72,10 @@ export type MapTranslations = {
   zoneCreateMetricCrime: string;
   zoneCreateMetricFootTraffic: string;
   zoneCreateMetricScaleLabel: string;
+  zoneCreateMetricApplyAllDay: string;
+  zoneCreateMetricCustomizeSchedule: string;
+  zoneCreateMetricHideSchedule: string;
+  zoneCreateMetricCustomizedSchedule: string;
   zoneCreateInfrastructureLighting: string;
   zoneCreateInfrastructureCctv: string;
   zoneCreateInfrastructureVigilance: string;

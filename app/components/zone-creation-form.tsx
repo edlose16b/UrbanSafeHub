@@ -1,4 +1,6 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import { POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
 import type { LeafletMapProps } from "./leaflet-map.types";
 import {
@@ -6,10 +8,15 @@ import {
   type SegmentKey,
 } from "@/lib/zones/rating-time-segments";
 import type {
+  MetricScoresSummary,
   NullableZoneRatingScore,
   ZoneCreationInfrastructureScores,
   ZoneCreationMetricScores,
   ZoneRatingScore,
+} from "./zone-creation-form.utils";
+import {
+  fillMetricScores,
+  summarizeMetricScores,
 } from "./zone-creation-form.utils";
 
 type ZoneCreationFormProps = {
@@ -109,16 +116,18 @@ function ScoreStars({
   metricLabel,
   segmentLabel,
   onScoreChange,
+  className,
 }: {
   value: NullableZoneRatingScore;
   metricLabel: string;
   segmentLabel: string;
   onScoreChange: (score: ZoneRatingScore) => void;
+  className?: string;
 }) {
   const activeColorClassName = resolveMetricStarColor(value);
 
   return (
-    <div className="mt-3 flex items-center justify-center gap-1">
+    <div className={`flex items-center justify-center gap-1 ${className ?? ""}`}>
       {SCORE_OPTIONS.map((score) => (
         <button
           key={score}
@@ -135,6 +144,68 @@ function ScoreStars({
           ★
         </button>
       ))}
+    </div>
+  );
+}
+
+function MetricSummaryCard({
+  title,
+  summary,
+  onScoreChange,
+  isExpanded,
+  onToggleExpanded,
+  translations,
+}: {
+  title: string;
+  summary: MetricScoresSummary;
+  onScoreChange: (score: ZoneRatingScore) => void;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+  translations: LeafletMapProps["translations"];
+}) {
+  const helperText = summary.isUniform
+    ? translations.zoneCreateMetricApplyAllDay
+    : summary.hasAnyScore
+      ? translations.zoneCreateMetricCustomizedSchedule
+      : translations.zoneCreateMetricApplyAllDay;
+
+  return (
+    <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-high p-4 transition-colors hover:bg-surface-highest">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div
+            aria-hidden
+            className="grid shrink-0 grid-cols-2 gap-x-0.5 gap-y-0.5 rounded-[0.85rem] bg-surface-lowest px-2 py-1.5 text-sm leading-none text-text-secondary"
+          >
+            <span>{SEGMENT_EMOJIS.morning}</span>
+            <span>{SEGMENT_EMOJIS.afternoon}</span>
+            <span>{SEGMENT_EMOJIS.night}</span>
+            <span>{SEGMENT_EMOJIS.early_morning}</span>
+          </div>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            <p className="mt-1 text-xs text-text-secondary">{helperText}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          className="rounded-full bg-surface-lowest px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-secondary transition-colors hover:bg-surface-high"
+          aria-expanded={isExpanded}
+        >
+          {isExpanded
+            ? translations.zoneCreateMetricHideSchedule
+            : translations.zoneCreateMetricCustomizeSchedule}
+        </button>
+      </div>
+      <ScoreStars
+        value={summary.displayScore}
+        metricLabel={title}
+        segmentLabel={helperText}
+        onScoreChange={onScoreChange}
+        className="mt-4"
+      />
     </div>
   );
 }
@@ -183,26 +254,46 @@ function MetricGroup({
   onScoreChange: (segment: SegmentKey, score: ZoneRatingScore) => void;
   translations: LeafletMapProps["translations"];
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const summary = summarizeMetricScores(scores);
+
+  useEffect(() => {
+    if (!summary.hasAnyScore) {
+      setIsExpanded(false);
+    }
+  }, [summary.hasAnyScore]);
+
+  function handleApplyToAll(score: ZoneRatingScore): void {
+    const filledScores = fillMetricScores(score);
+    for (const segment of SEGMENT_ORDER) {
+      onScoreChange(segment, filledScores[segment]);
+    }
+  }
+
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-          {translations.zoneCreateMetricScaleLabel}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {SEGMENT_ORDER.map((segment) => (
-          <MetricSegmentCard
-            key={segment}
-            metricLabel={title}
-            segment={segment}
-            score={scores[segment]}
-            onScoreChange={(score) => onScoreChange(segment, score)}
-            translations={translations}
-          />
-        ))}
-      </div>
+      <MetricSummaryCard
+        title={title}
+        summary={summary}
+        onScoreChange={handleApplyToAll}
+        isExpanded={isExpanded}
+        onToggleExpanded={() => setIsExpanded((current) => !current)}
+        translations={translations}
+      />
+      {isExpanded ? (
+        <div className="grid grid-cols-2 gap-3">
+          {SEGMENT_ORDER.map((segment) => (
+            <MetricSegmentCard
+              key={segment}
+              metricLabel={title}
+              segment={segment}
+              score={scores[segment]}
+              onScoreChange={(score) => onScoreChange(segment, score)}
+              translations={translations}
+            />
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }

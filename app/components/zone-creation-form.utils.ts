@@ -17,6 +17,12 @@ export type ZoneCreationRatingPayload = {
   score: ZoneRatingScore;
 };
 
+export type MetricScoresSummary = {
+  displayScore: NullableZoneRatingScore;
+  hasAnyScore: boolean;
+  isUniform: boolean;
+};
+
 export function createEmptyMetricScores(): ZoneCreationMetricScores {
   return {
     morning: null,
@@ -45,6 +51,50 @@ export function isZoneRatingScore(value: unknown): value is ZoneRatingScore {
 
 export function hasCompleteMetricScores(scores: ZoneCreationMetricScores): boolean {
   return SEGMENT_ORDER.every((segment) => isZoneRatingScore(scores[segment]));
+}
+
+export function fillMetricScores(score: ZoneRatingScore): ZoneCreationMetricScores {
+  return {
+    morning: score,
+    afternoon: score,
+    night: score,
+    early_morning: score,
+  };
+}
+
+export function summarizeMetricScores(scores: ZoneCreationMetricScores): MetricScoresSummary {
+  const values = SEGMENT_ORDER.map((segment) => scores[segment]);
+  const validValues = values.filter(isZoneRatingScore);
+
+  if (validValues.length === 0) {
+    return {
+      displayScore: null,
+      hasAnyScore: false,
+      isUniform: false,
+    };
+  }
+
+  const firstValue = values[0];
+  const isUniform =
+    isZoneRatingScore(firstValue) &&
+    SEGMENT_ORDER.every((segment) => scores[segment] === firstValue);
+
+  if (isUniform) {
+    return {
+      displayScore: firstValue,
+      hasAnyScore: true,
+      isUniform: true,
+    };
+  }
+
+  const average = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+  const roundedAverage = Math.max(1, Math.min(5, Math.round(average))) as ZoneRatingScore;
+
+  return {
+    displayScore: roundedAverage,
+    hasAnyScore: true,
+    isUniform: false,
+  };
 }
 
 export function hasCompleteInfrastructureScores(

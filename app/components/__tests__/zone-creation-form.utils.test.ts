@@ -1,5 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { buildZoneCreationRatingsPayload } from "../zone-creation-form.utils";
+import {
+  buildZoneCreationRatingsPayload,
+  fillMetricScores,
+  summarizeMetricScores,
+} from "../zone-creation-form.utils";
+
+describe("metric score helpers", () => {
+  it("fills every time segment with the same score", () => {
+    expect(fillMetricScores(4)).toEqual({
+      morning: 4,
+      afternoon: 4,
+      night: 4,
+      early_morning: 4,
+    });
+  });
+
+  it("returns a uniform summary when all segments share the same score", () => {
+    expect(
+      summarizeMetricScores({
+        morning: 3,
+        afternoon: 3,
+        night: 3,
+        early_morning: 3,
+      }),
+    ).toEqual({
+      displayScore: 3,
+      hasAnyScore: true,
+      isUniform: true,
+    });
+  });
+
+  it("returns a rounded summary and customized state when segments differ", () => {
+    expect(
+      summarizeMetricScores({
+        morning: 5,
+        afternoon: 4,
+        night: 2,
+        early_morning: 1,
+      }),
+    ).toEqual({
+      displayScore: 3,
+      hasAnyScore: true,
+      isUniform: false,
+    });
+  });
+});
 
 describe("buildZoneCreationRatingsPayload", () => {
   it("expands the infrastructure vigilance score to all time segments", () => {

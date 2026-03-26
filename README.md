@@ -1,6 +1,7 @@
 # UrbanSafeHub
 
 🕵️ UrbanSafeHub es un mapa comunitario donde podrás ver y calificar zonas de las ciudades.
+![Demo https://urbansafehub.edwinbalbin.com/](https://urbansafehub.edwinbalbin.com/)
 
 ## Problema que resuelve
 
@@ -9,6 +10,20 @@ Latinoamerica es hermosa, pero tenemos gente mala. Cuando creé (otra versión) 
 ## Solución propuesta
 
 Usuarios que sepan como es tal lugar podrá crear/calificar zonas para así informar a locales y extranjeros sobre que zonas visitar o no.
+
+## Screenshots
+
+### Vista principal del mapa
+
+![Vista principal del mapa](./screenshots/image.png)
+
+### Detalle de zona
+
+![Detalle de zona](./screenshots/detail.png)
+
+### Creación de zona
+
+![Creación de zona](./screenshots/create.png)
 
 ### Flujo principal
 

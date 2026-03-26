@@ -9,6 +9,11 @@ import {
   ZoneValidationError,
 } from "@/lib/zones/domain/validation";
 import { SupabaseZoneRepository } from "@/lib/zones/infrastructure/supabase-zone-repository";
+import {
+  getCachedVisibleZones,
+  invalidateVisibleZonesCache,
+  setCachedVisibleZones,
+} from "@/lib/zones/server/zones-cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function isMissingSessionError(message: string): boolean {
@@ -54,6 +59,18 @@ export async function GET(request: NextRequest): Promise<Response> {
   const radiusKm = clampRadiusKm(rawRadiusKm);
 
   try {
+    const cachedZones = await getCachedVisibleZones({
+      lat,
+      lng,
+      radiusKm,
+    });
+
+    if (cachedZones) {
+      return Response.json({
+        zones: cachedZones,
+      });
+    }
+
     const supabase = await getSupabaseServerClient();
     const repository = new SupabaseZoneRepository(supabase);
     const useCase = new ListVisibleZonesUseCase(repository);
@@ -62,9 +79,19 @@ export async function GET(request: NextRequest): Promise<Response> {
       lng,
       radiusKm,
     });
+    const zoneDTOs = zones.map((zone) => toZoneDTO(zone));
+
+    await setCachedVisibleZones(
+      {
+        lat,
+        lng,
+        radiusKm,
+      },
+      zoneDTOs,
+    );
 
     return Response.json({
-      zones: zones.map((zone) => toZoneDTO(zone)),
+      zones: zoneDTOs,
     });
   } catch (error) {
     return Response.json(
@@ -142,6 +169,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       ratings: candidate.ratings,
       createdBy: user.id,
     });
+
+    await invalidateVisibleZonesCache();
 
     return Response.json(
       {

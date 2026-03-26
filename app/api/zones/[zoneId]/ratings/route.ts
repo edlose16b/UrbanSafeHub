@@ -9,6 +9,7 @@ import {
   buildAnonymousVoteIdentity,
   getClientIp,
 } from "@/lib/zones/server/anonymous-vote-identity";
+import { invalidateVisibleZonesCache } from "@/lib/zones/server/zones-cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 const ANONYMOUS_FINGERPRINT_COOKIE = "urban_safehub_anonymous_fingerprint";
@@ -69,6 +70,8 @@ export async function POST(
       anonymousActor,
       ratings: (payload as { ratings?: unknown }).ratings,
     });
+
+    await invalidateVisibleZonesCache();
 
     const detail = await detailUseCase.execute(zoneId, viewer.id);
 

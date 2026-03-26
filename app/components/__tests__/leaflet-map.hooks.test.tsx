@@ -60,7 +60,7 @@ describe("useZonesByViewport", () => {
     });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(349);
+      await vi.advanceTimersByTimeAsync(899);
     });
     expect(fetchMock).not.toHaveBeenCalled();
 
@@ -81,23 +81,52 @@ describe("useZonesByViewport", () => {
       result.current.scheduleZoneFetch(baseViewport);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(350);
+      await vi.advanceTimersByTimeAsync(900);
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    const tinyMoveViewport: ViewportQuery = {
+    const belowThresholdViewport: ViewportQuery = {
       ...baseViewport,
-      lat: baseViewport.lat + metersToLatDelta(1),
+      lat: baseViewport.lat + metersToLatDelta(190),
     };
 
     act(() => {
-      result.current.scheduleZoneFetch(tinyMoveViewport);
+      result.current.scheduleZoneFetch(belowThresholdViewport);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(350);
+      await vi.advanceTimersByTimeAsync(900);
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetches again when movement reaches the 40% radius threshold", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createZonesResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useZonesByViewport());
+
+    act(() => {
+      result.current.scheduleZoneFetch(baseViewport);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const thresholdMoveViewport: ViewportQuery = {
+      ...baseViewport,
+      lat: baseViewport.lat + metersToLatDelta(210),
+    };
+
+    act(() => {
+      result.current.scheduleZoneFetch(thresholdMoveViewport);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("fetches on zoom when radius changes by 15% or more", async () => {
@@ -110,7 +139,7 @@ describe("useZonesByViewport", () => {
       result.current.scheduleZoneFetch(baseViewport);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(350);
+      await vi.advanceTimersByTimeAsync(900);
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -123,7 +152,7 @@ describe("useZonesByViewport", () => {
       result.current.scheduleZoneFetch(zoomedViewport);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(350);
+      await vi.advanceTimersByTimeAsync(900);
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -139,7 +168,7 @@ describe("useZonesByViewport", () => {
       result.current.scheduleZoneFetch(baseViewport);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(350);
+      await vi.advanceTimersByTimeAsync(900);
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -152,7 +181,7 @@ describe("useZonesByViewport", () => {
       result.current.scheduleZoneFetch(smallZoomViewport);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(350);
+      await vi.advanceTimersByTimeAsync(900);
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);

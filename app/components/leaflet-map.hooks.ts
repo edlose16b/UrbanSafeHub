@@ -21,7 +21,7 @@ import {
   getInitialLocationStatus,
 } from "./leaflet-map.utils";
 
-const VIEWPORT_FETCH_DEBOUNCE_MS = 350;
+const VIEWPORT_FETCH_DEBOUNCE_MS = 900;
 
 type GeolocationOptions = {
   enableHighAccuracy: boolean;

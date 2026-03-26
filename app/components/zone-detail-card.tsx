@@ -2,8 +2,8 @@
 
 import { type ReactNode } from "react";
 import {
-  EyeIcon,
   LampIcon,
+  PoliceCarIcon,
   SecurityCameraIcon,
   ShieldWarningIcon,
   UsersThreeIcon,
@@ -83,7 +83,9 @@ function CategoryIcon({ categorySlug }: { categorySlug: string }) {
   }
 
   if (categorySlug === "vigilance") {
-    return <EyeIcon size={size} weight={weight} aria-hidden className={className} />;
+    return (
+      <PoliceCarIcon size={size} weight={weight} aria-hidden className={className} />
+    );
   }
 
   if (categorySlug === "cctv") {

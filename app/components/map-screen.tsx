@@ -79,12 +79,17 @@ export type MapTranslations = {
   zoneCreateInfrastructureLighting: string;
   zoneCreateInfrastructureCctv: string;
   zoneCreateInfrastructureVigilance: string;
+  zoneCreateInfrastructureCctvNone: string;
+  zoneCreateInfrastructureCctvFew: string;
+  zoneCreateInfrastructureCctvGood: string;
+  zoneCreateInfrastructureCctvHint: string;
   zoneCreateLightingPlaceholder: string;
   zoneCreateScoreOption1: string;
   zoneCreateScoreOption2: string;
   zoneCreateScoreOption3: string;
   zoneCreateScoreOption4: string;
   zoneCreateScoreOption5: string;
+  zoneCreateRatingsHint: string;
   zoneCreateRatingsRequired: string;
   zoneCreateCancel: string;
   zoneDetailLoading: string;

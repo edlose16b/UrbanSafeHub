@@ -394,6 +394,12 @@ export function useZoneCreation({
       infrastructureScores,
     });
 
+    if (ratings.length === 0) {
+      setSubmitError(translations.zoneCreateRatingsRequired);
+      setSubmitSuccess(null);
+      return false;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitSuccess(null);
@@ -455,6 +461,7 @@ export function useZoneCreation({
     translations.zoneCreateFailedFallback,
     translations.zoneCreateNameRequired,
     translations.zoneCreatePointRequired,
+    translations.zoneCreateRatingsRequired,
     translations.zoneCreateSuccess,
     translations.zoneCreateTermsRequired,
     zoneDescription,

@@ -152,26 +152,8 @@ describe("useZoneCreation", () => {
     expect(result.current.submitError).toBe(translations.zoneCreateTermsRequired);
   });
 
-  it("allows submit when ratings are empty", async () => {
-    const createdZone: ZoneDTO = {
-      id: "zone-2",
-      name: "Minimal point",
-      geometry: {
-        type: "Point",
-        coordinates: [baseLng, baseLat],
-        radiusM: 150,
-      },
-      crimeLevel: null,
-      createdBy: "user-1",
-      createdAt: new Date().toISOString(),
-    };
-
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ zone: createdZone }), {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+  it("blocks submit when no ratings were registered", async () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() =>
@@ -190,11 +172,10 @@ describe("useZoneCreation", () => {
 
     await act(async () => {
       const ok = await result.current.submit();
-      expect(ok).toBe(true);
+      expect(ok).toBe(false);
     });
 
-    const [, init] = fetchMock.mock.calls[0];
-    const body = JSON.parse((init?.body as string) ?? "{}");
-    expect(body.ratings).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.submitError).toBe(translations.zoneCreateRatingsRequired);
   });
 });

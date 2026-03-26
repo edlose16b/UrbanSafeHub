@@ -2,8 +2,8 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import {
-  EyeIcon,
   LampIcon,
+  PoliceCarIcon,
   SecurityCameraIcon,
   ShieldWarningIcon,
   UsersThreeIcon,
@@ -57,6 +57,31 @@ type ZoneCreationFormProps = {
 };
 
 const SCORE_OPTIONS: readonly ZoneRatingScore[] = [1, 2, 3, 4, 5] as const;
+const CCTV_OPTIONS: readonly {
+  labelKey:
+  | "zoneCreateInfrastructureCctvNone"
+  | "zoneCreateInfrastructureCctvFew"
+  | "zoneCreateInfrastructureCctvGood";
+  score: ZoneRatingScore;
+  activeClassName: string;
+}[] = [
+  {
+    labelKey: "zoneCreateInfrastructureCctvNone",
+    score: 1,
+    activeClassName: "border border-primary/40 bg-primary text-primary-foreground",
+  },
+  {
+    labelKey: "zoneCreateInfrastructureCctvFew",
+    score: 3,
+    activeClassName:
+      "border border-secondary/40 bg-secondary text-secondary-foreground",
+  },
+  {
+    labelKey: "zoneCreateInfrastructureCctvGood",
+    score: 5,
+    activeClassName: "border border-tertiary/40 bg-tertiary text-tertiary-foreground",
+  },
+] as const;
 
 const SEGMENT_EMOJIS: Record<SegmentKey, string> = {
   morning: "☀️",
@@ -132,7 +157,9 @@ function CategoryIcon({
     case "lighting":
       return <LampIcon size={size} weight={weight} aria-hidden className={className} />;
     case "vigilance":
-      return <EyeIcon size={size} weight={weight} aria-hidden className={className} />;
+      return (
+        <PoliceCarIcon size={size} weight={weight} aria-hidden className={className} />
+      );
     case "cctv":
       return <SecurityCameraIcon size={size} weight={weight} aria-hidden className={className} />;
   }
@@ -162,11 +189,10 @@ function ScoreStars({
           onClick={() => onScoreChange(score)}
           aria-label={`${metricLabel} · ${segmentLabel} · ${score}/5`}
           aria-pressed={value === score}
-          className={`rounded-md p-1 text-lg leading-none transition-colors hover:scale-105 ${
-            value !== null && score <= value
-              ? activeColorClassName
-              : "text-white/80"
-          }`}
+          className={`rounded-md p-1 text-lg leading-none transition-colors hover:scale-105 ${value !== null && score <= value
+            ? activeColorClassName
+            : "text-white/80"
+            }`}
         >
           ★
         </button>
@@ -342,11 +368,10 @@ function InfrastructureScale({
             onClick={() => onChange(score)}
             aria-pressed={isActive}
             aria-label={resolveScaleLabel(score, translations)}
-            className={`rounded-lg px-0 py-2 text-[11px] font-semibold transition-all ${
-              isActive
-                ? "border border-primary/40 bg-primary text-primary-foreground"
-                : "bg-surface-highest text-text-secondary hover:bg-surface-high"
-            }`}
+            className={`rounded-lg px-0 py-2 text-[11px] font-semibold transition-all ${isActive
+              ? "border border-primary/40 bg-primary text-primary-foreground"
+              : "bg-surface-highest text-text-secondary hover:bg-surface-high"
+              }`}
           >
             {score}
           </button>
@@ -469,11 +494,10 @@ export function ZoneCreationForm({
                   key={radiusOption}
                   type="button"
                   onClick={() => onRadiusChange(radiusOption)}
-                  className={`rounded-[0.9rem] px-3 py-2 text-xs font-medium transition-all ${
-                    pointRadiusM === radiusOption
-                      ? "bg-surface-bright text-foreground shadow-[0_0_18px_rgba(255,83,82,0.16)] ghost-outline"
-                      : "bg-surface-muted text-text-muted hover:bg-surface-high"
-                  }`}
+                  className={`rounded-[0.9rem] px-3 py-2 text-xs font-medium transition-all ${pointRadiusM === radiusOption
+                    ? "bg-surface-bright text-foreground shadow-[0_0_18px_rgba(255,83,82,0.16)] ghost-outline"
+                    : "bg-surface-muted text-text-muted hover:bg-surface-high"
+                    }`}
                   aria-pressed={pointRadiusM === radiusOption}
                 >
                   {radiusOption}m
@@ -517,6 +541,9 @@ export function ZoneCreationForm({
             translations={translations}
           />
         </div>
+        <p className="mt-4 text-xs leading-relaxed text-text-secondary">
+          {translations.zoneCreateRatingsHint}
+        </p>
       </section>
 
       <section className="mt-6">
@@ -540,9 +567,9 @@ export function ZoneCreationForm({
                 onChange={(event) =>
                   event.target.value
                     ? onInfrastructureScoreChange(
-                        "lighting",
-                        Number(event.target.value) as ZoneRatingScore,
-                      )
+                      "lighting",
+                      Number(event.target.value) as ZoneRatingScore,
+                    )
                     : undefined
                 }
                 className="rounded-lg bg-surface-highest px-3 py-2 text-xs text-foreground outline-none"
@@ -565,15 +592,32 @@ export function ZoneCreationForm({
                   <span>{translations.zoneCreateInfrastructureCctv}</span>
                 </span>
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-                {translations.zoneCreateMetricScaleLabel}
-              </span>
             </div>
-            <InfrastructureScale
-              value={infrastructureScores.cctv}
-              onChange={(score) => onInfrastructureScoreChange("cctv", score)}
-              translations={translations}
-            />
+            <div className="grid grid-cols-3 gap-2">
+              {CCTV_OPTIONS.map((option) => {
+                const isActive = infrastructureScores.cctv === option.score;
+
+                return (
+                  <button
+                    key={option.labelKey}
+                    type="button"
+                    onClick={() =>
+                      onInfrastructureScoreChange("cctv", option.score)
+                    }
+                    aria-pressed={isActive}
+                    className={`rounded-lg px-3 py-2 text-[11px] font-semibold transition-all ${isActive
+                      ? option.activeClassName
+                      : "bg-surface-highest text-text-secondary hover:bg-surface-high"
+                      }`}
+                  >
+                    {translations[option.labelKey]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-text-secondary">
+              {translations.zoneCreateInfrastructureCctvHint}
+            </p>
           </div>
 
           <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">

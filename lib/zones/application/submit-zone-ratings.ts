@@ -5,6 +5,13 @@ export type SubmitZoneRatingsCommand = {
   zoneId: string;
   userId: string | null;
   anonymousFingerprint: string | null;
+  anonymousActor:
+    | {
+        fingerprintHash: string;
+        ipHash: string | null;
+        userAgentHash: string | null;
+      }
+    | null;
   ratings: unknown;
 };
 
@@ -18,6 +25,7 @@ export class SubmitZoneRatingsUseCase {
       zoneId: command.zoneId,
       userId: command.userId,
       anonymousFingerprint: command.anonymousFingerprint,
+      anonymousActor: command.anonymousActor,
       ratings,
     });
   }

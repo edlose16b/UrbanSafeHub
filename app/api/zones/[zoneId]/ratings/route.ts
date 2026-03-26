@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentAuthUserSnapshot } from "@/lib/auth/server/get-current-auth-user";
 import { SubmitZoneRatingsUseCase } from "@/lib/zones/application/submit-zone-ratings";
@@ -6,6 +5,10 @@ import { GetVisibleZoneDetailUseCase } from "@/lib/zones/application/get-visible
 import { toZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { ZoneValidationError } from "@/lib/zones/domain/validation";
 import { SupabaseZoneRepository } from "@/lib/zones/infrastructure/supabase-zone-repository";
+import {
+  buildAnonymousVoteIdentity,
+  getClientIp,
+} from "@/lib/zones/server/anonymous-vote-identity";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 const ANONYMOUS_FINGERPRINT_COOKIE = "urban_safehub_anonymous_fingerprint";
@@ -34,11 +37,10 @@ export async function POST(
   }
 
   try {
-    const [payload, viewer, supabase, cookieStore] = await Promise.all([
+    const [payload, viewer, supabase] = await Promise.all([
       request.json(),
       getCurrentAuthUserSnapshot(),
       getSupabaseServerClient(),
-      cookies(),
     ]);
 
     const repository = new SupabaseZoneRepository(supabase);
@@ -46,16 +48,25 @@ export async function POST(
     const detailUseCase = new GetVisibleZoneDetailUseCase(repository);
 
     let anonymousFingerprint: string | null = null;
+    let anonymousActor: {
+      fingerprintHash: string;
+      ipHash: string | null;
+      userAgentHash: string | null;
+    } | null = null;
 
     if (viewer.isAnonymous) {
-      anonymousFingerprint =
-        cookieStore.get(ANONYMOUS_FINGERPRINT_COOKIE)?.value ?? crypto.randomUUID();
+      anonymousActor = buildAnonymousVoteIdentity({
+        ip: getClientIp(request),
+        userAgent: request.headers.get("user-agent"),
+      });
+      anonymousFingerprint = anonymousActor.fingerprintHash;
     }
 
     await submitUseCase.execute({
       zoneId,
       userId: viewer.id,
       anonymousFingerprint,
+      anonymousActor,
       ratings: (payload as { ratings?: unknown }).ratings,
     });
 

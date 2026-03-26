@@ -23,6 +23,13 @@ export type SubmitZoneRatingsRecord = {
   zoneId: string;
   userId: string | null;
   anonymousFingerprint: string | null;
+  anonymousActor:
+    | {
+        fingerprintHash: string;
+        ipHash: string | null;
+        userAgentHash: string | null;
+      }
+    | null;
   ratings: CreateZoneRatingRecord[];
 };
 

@@ -101,9 +101,28 @@ model Zone {
   ratings          ZoneRating[]
   ratingAggregates ZoneRatingAggregate[]
   comments         ZoneComment[]
+  anonymousVoteActors AnonymousVoteActor[]
 
   @@index([visibility, deletedAt])
   @@map("zones")
+}
+
+model AnonymousVoteActor {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fingerprintHash  String   @unique @map("fingerprint_hash")
+  firstSeenAt      DateTime @default(now()) @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt       DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  lastIpHash       String?  @map("last_ip_hash")
+  lastUserAgentHash String? @map("last_user_agent_hash")
+  voteCount        Int      @default(0) @map("vote_count")
+  lastZoneId       String?  @map("last_zone_id") @db.Uuid
+  notes            String?
+
+  lastZone Zone? @relation(fields: [lastZoneId], references: [id], onDelete: SetNull)
+
+  @@index([lastSeenAt(sort: Desc)])
+  @@index([lastZoneId])
+  @@map("anonymous_vote_actors")
 }
 
 model ZoneRating {

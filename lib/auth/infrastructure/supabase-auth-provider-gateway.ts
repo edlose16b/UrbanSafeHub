@@ -53,8 +53,6 @@ export class SupabaseAuthProviderGateway implements AuthProviderGateway {
   async getCurrentAuthIdentity(): Promise<AuthIdentity | null> {
     try {
       const { data, error } = await this.supabase.auth.getUser();
-      console.log("data ", data);
-      console.log("error ", error);
       if (error) {
         if (isMissingSessionError(error.message)) {
           return null;

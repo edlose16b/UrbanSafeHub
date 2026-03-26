@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GetCurrentUserUseCase } from "@/lib/auth/application/get-current-user";
 import { SignInWithGoogleUseCase } from "@/lib/auth/application/sign-in-with-google";
-import { SignOutUseCase } from "@/lib/auth/application/sign-out";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
 import { SupabaseAuthProviderGateway } from "@/lib/auth/infrastructure/supabase-auth-provider-gateway";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { signOutAction } from "./auth-avatar-menu.actions";
 
 export type AuthMenuTranslations = {
   anonymousLabel: string;
@@ -49,10 +49,6 @@ export default function AuthAvatarMenu({
   );
   const signInWithGoogleUseCase = useMemo(
     () => new SignInWithGoogleUseCase(authProvider),
-    [authProvider],
-  );
-  const signOutUseCase = useMemo(
-    () => new SignOutUseCase(authProvider),
     [authProvider],
   );
 
@@ -97,7 +93,7 @@ export default function AuthAvatarMenu({
     setIsPending(true);
 
     try {
-      await signOutUseCase.execute();
+      await signOutAction();
       setCurrentUser({
         id: null,
         email: null,

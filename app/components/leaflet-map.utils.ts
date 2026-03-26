@@ -89,14 +89,14 @@ export function getZoneSeverity(crimeLevel: number | null): ZoneSeverity {
   }
 
   if (crimeLevel >= 4) {
-    return "danger";
+    return "safe";
   }
 
   if (crimeLevel > 2) {
     return "moderate";
   }
 
-  return "safe";
+  return "danger";
 }
 
 export function zoneMatchesFilter(zone: ZoneDTO, filterKey: ZoneFilterKey): boolean {
@@ -141,13 +141,7 @@ export function getZoneCenter(geometry: ZoneGeometry): [number, number] {
 function getSegmentSafetyScore(detail: ZoneDetailDTO, segmentKey: string): number | null {
   const scores = detail.aggregates
     .filter((aggregate) => aggregate.timeSegment === segmentKey && aggregate.avgScore !== null)
-    .map((aggregate) => {
-      if (aggregate.categorySlug === "crime") {
-        return 6 - (aggregate.avgScore ?? 0);
-      }
-
-      return aggregate.avgScore ?? 0;
-    });
+    .map((aggregate) => aggregate.avgScore ?? 0);
 
   if (scores.length === 0) {
     return null;

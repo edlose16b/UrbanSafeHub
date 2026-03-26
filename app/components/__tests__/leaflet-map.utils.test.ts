@@ -85,9 +85,9 @@ describe("leaflet-map.utils", () => {
 
   it("maps crime levels into discrete severity buckets", () => {
     expect(getZoneSeverity(null)).toBe("unknown");
-    expect(getZoneSeverity(1.8)).toBe("safe");
+    expect(getZoneSeverity(1.8)).toBe("danger");
     expect(getZoneSeverity(3.1)).toBe("moderate");
-    expect(getZoneSeverity(4.2)).toBe("danger");
+    expect(getZoneSeverity(4.2)).toBe("safe");
   });
 
   it("matches zones by filter and search query", () => {
@@ -104,8 +104,8 @@ describe("leaflet-map.utils", () => {
       createdAt: "2026-03-01T00:00:00.000Z",
     };
 
-    expect(zoneMatchesFilter(zone, "danger")).toBe(true);
-    expect(zoneMatchesFilter(zone, "safe")).toBe(false);
+    expect(zoneMatchesFilter(zone, "danger")).toBe(false);
+    expect(zoneMatchesFilter(zone, "safe")).toBe(true);
     expect(zoneMatchesSearch(zone, "central")).toBe(true);
     expect(zoneMatchesSearch(zone, "paradero")).toBe(false);
   });
@@ -139,9 +139,9 @@ describe("leaflet-map.utils", () => {
   });
 
   it("derives discrete heat colors and a day-stronger trend summary", () => {
-    expect(getCrimeHeatColor(1.4)).toBe("#00a657");
+    expect(getCrimeHeatColor(1.4)).toBe("#93000a");
     expect(getCrimeHeatColor(3.1)).toBe("#ffb95c");
-    expect(getCrimeHeatColor(4.5)).toBe("#93000a");
+    expect(getCrimeHeatColor(4.5)).toBe("#00a657");
 
     const detail: ZoneDetailDTO = {
       zone: {
@@ -157,20 +157,20 @@ describe("leaflet-map.utils", () => {
         createdAt: "2026-03-20T10:00:00.000Z",
       },
       aggregates: [
-        { categorySlug: "crime", timeSegment: "morning", ratingsCount: 3, avgScore: 1.4 },
+        { categorySlug: "crime", timeSegment: "morning", ratingsCount: 3, avgScore: 4.6 },
         { categorySlug: "lighting", timeSegment: "morning", ratingsCount: 3, avgScore: 4.8 },
-        { categorySlug: "crime", timeSegment: "afternoon", ratingsCount: 3, avgScore: 2.1 },
+        { categorySlug: "crime", timeSegment: "afternoon", ratingsCount: 3, avgScore: 4.2 },
         { categorySlug: "foot_traffic", timeSegment: "afternoon", ratingsCount: 3, avgScore: 4.3 },
-        { categorySlug: "crime", timeSegment: "night", ratingsCount: 3, avgScore: 4.4 },
+        { categorySlug: "crime", timeSegment: "night", ratingsCount: 3, avgScore: 2.0 },
         { categorySlug: "lighting", timeSegment: "night", ratingsCount: 3, avgScore: 2.6 },
-        { categorySlug: "crime", timeSegment: "early_morning", ratingsCount: 3, avgScore: 4.8 },
+        { categorySlug: "crime", timeSegment: "early_morning", ratingsCount: 3, avgScore: 1.5 },
       ],
       comments: [],
     };
 
     expect(getZoneTrendSummary(detail)).toEqual({
       direction: "day_stronger",
-      progressPercent: 60,
+      progressPercent: 64,
     });
   });
 });

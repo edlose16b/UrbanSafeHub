@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   LampIcon,
   PoliceCarIcon,
@@ -19,9 +19,26 @@ import {
   getZoneStreetViewUrl,
   getZoneTrendSummary,
 } from "./leaflet-map.utils";
-import { SEGMENT_EMOJIS, resolveMetricStarColor } from "./zone-rating-ui";
+import {
+  SEGMENT_EMOJIS,
+  ScoreStars,
+  resolveMetricStarColor,
+  resolveSegmentLabel,
+} from "./zone-rating-ui";
+import {
+  buildZoneCreationRatingsPayload,
+  createEmptyInfrastructureScores,
+  createEmptyMetricScores,
+  summarizeMetricScores,
+  type MetricScoresSummary,
+  type NullableZoneRatingScore,
+  type ZoneCreationInfrastructureScores,
+  type ZoneCreationMetricScores,
+  type ZoneRatingScore,
+} from "./zone-creation-form.utils";
 
 const RATING_CATEGORY_ORDER = [
+  "overall_safety",
   "crime",
   "lighting",
   "foot_traffic",
@@ -45,6 +62,10 @@ function formatDateLabel(isoString: string, locale: string): string {
 }
 
 function resolveCategoryLabel(categorySlug: string, translations: MapTranslations): string {
+  if (categorySlug === "overall_safety") {
+    return translations.zoneDetailCategoryOverallSafety;
+  }
+
   if (categorySlug === "crime") {
     return translations.zoneDetailCategoryCrime;
   }
@@ -81,6 +102,10 @@ function CategoryIcon({
 }) {
   const size = 18;
   const weight = "duotone" as const;
+
+  if (categorySlug === "overall_safety") {
+    return <ShieldWarningIcon size={size} weight={weight} aria-hidden className={className} />;
+  }
 
   if (categorySlug === "crime") {
     return <ShieldWarningIcon size={size} weight={weight} aria-hidden className={className} />;
@@ -396,12 +421,579 @@ function getProfileLabel(detail: ZoneDetailDTO, translations: MapTranslations): 
   return translations.zoneDetailProfileInsufficientData;
 }
 
+const SCORE_OPTIONS: readonly ZoneRatingScore[] = [1, 2, 3, 4, 5] as const;
+const CCTV_OPTIONS: readonly {
+  labelKey:
+    | "zoneCreateInfrastructureCctvNone"
+    | "zoneCreateInfrastructureCctvFew"
+    | "zoneCreateInfrastructureCctvGood";
+  score: ZoneRatingScore;
+  activeClassName: string;
+}[] = [
+  {
+    labelKey: "zoneCreateInfrastructureCctvNone",
+    score: 1,
+    activeClassName: "border border-primary/40 bg-primary text-primary-foreground",
+  },
+  {
+    labelKey: "zoneCreateInfrastructureCctvFew",
+    score: 3,
+    activeClassName:
+      "border border-secondary/40 bg-secondary text-secondary-foreground",
+  },
+  {
+    labelKey: "zoneCreateInfrastructureCctvGood",
+    score: 5,
+    activeClassName: "border border-tertiary/40 bg-tertiary text-tertiary-foreground",
+  },
+] as const;
+
+type VoteFormState = {
+  crimeScores: ZoneCreationMetricScores;
+  footTrafficScores: ZoneCreationMetricScores;
+  infrastructureScores: ZoneCreationInfrastructureScores;
+};
+
+function getViewerRatingValue(
+  detail: ZoneDetailDTO,
+  categorySlug: string,
+  timeSegment: SegmentKey | null,
+): NullableZoneRatingScore {
+  const rating = detail.viewerRatings.find(
+    (entry) =>
+      entry.categorySlug === categorySlug &&
+      (entry.timeSegment ?? null) === timeSegment,
+  );
+
+  return (rating?.score as NullableZoneRatingScore | undefined) ?? null;
+}
+
+function createVoteFormState(detail: ZoneDetailDTO): VoteFormState {
+  return {
+    crimeScores: {
+      morning: getViewerRatingValue(detail, "crime", "morning"),
+      afternoon: getViewerRatingValue(detail, "crime", "afternoon"),
+      night: getViewerRatingValue(detail, "crime", "night"),
+      early_morning: getViewerRatingValue(detail, "crime", "early_morning"),
+    },
+    footTrafficScores: {
+      morning: getViewerRatingValue(detail, "foot_traffic", "morning"),
+      afternoon: getViewerRatingValue(detail, "foot_traffic", "afternoon"),
+      night: getViewerRatingValue(detail, "foot_traffic", "night"),
+      early_morning: getViewerRatingValue(detail, "foot_traffic", "early_morning"),
+    },
+    infrastructureScores: {
+      lighting: getViewerRatingValue(detail, "lighting", null),
+      cctv: getViewerRatingValue(detail, "cctv", null),
+      vigilance: {
+        morning: getViewerRatingValue(detail, "vigilance", "morning"),
+        afternoon: getViewerRatingValue(detail, "vigilance", "afternoon"),
+        night: getViewerRatingValue(detail, "vigilance", "night"),
+        early_morning: getViewerRatingValue(detail, "vigilance", "early_morning"),
+      },
+    },
+  };
+}
+
+function hasExistingViewerVote(detail: ZoneDetailDTO): boolean {
+  return detail.viewerRatings.length > 0;
+}
+
+function resolveScaleLabel(
+  score: ZoneRatingScore,
+  translations: MapTranslations,
+): string {
+  switch (score) {
+    case 1:
+      return translations.zoneCreateScoreOption1;
+    case 2:
+      return translations.zoneCreateScoreOption2;
+    case 3:
+      return translations.zoneCreateScoreOption3;
+    case 4:
+      return translations.zoneCreateScoreOption4;
+    case 5:
+      return translations.zoneCreateScoreOption5;
+  }
+}
+
+function MetricSummaryCard({
+  title,
+  icon,
+  summary,
+  onScoreChange,
+  isExpanded,
+  onToggleExpanded,
+  actionLabel,
+  translations,
+}: {
+  title: string;
+  icon: ReactNode;
+  summary: MetricScoresSummary;
+  onScoreChange: (score: ZoneRatingScore) => void;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+  actionLabel?: string;
+  translations: MapTranslations;
+}) {
+  const helperText = summary.isUniform
+    ? translations.zoneCreateMetricApplyAllDay
+    : summary.hasAnyScore
+      ? translations.zoneCreateMetricCustomizedSchedule
+      : translations.zoneCreateMetricApplyAllDay;
+
+  return (
+    <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-high p-4 transition-colors hover:bg-surface-highest">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div>
+            <h4 className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+              {icon}
+              <span>{title}</span>
+            </h4>
+            <p className="mt-1 text-xs text-text-secondary">{helperText}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          className="rounded-full bg-surface-lowest px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-secondary transition-colors hover:bg-surface-high"
+          aria-expanded={isExpanded}
+        >
+          {actionLabel ??
+            (isExpanded
+            ? translations.zoneCreateMetricHideSchedule
+            : translations.zoneCreateMetricCustomizeSchedule)}
+        </button>
+      </div>
+      <ScoreStars
+        value={summary.displayScore}
+        metricLabel={title}
+        segmentLabel={helperText}
+        onScoreChange={onScoreChange}
+        className="mt-4"
+      />
+    </div>
+  );
+}
+
+function MetricSegmentCard({
+  metricLabel,
+  segment,
+  score,
+  onScoreChange,
+  translations,
+}: {
+  metricLabel: string;
+  segment: SegmentKey;
+  score: NullableZoneRatingScore;
+  onScoreChange: (score: ZoneRatingScore) => void;
+  translations: MapTranslations;
+}) {
+  const segmentLabel = resolveSegmentLabel(segment, translations);
+
+  return (
+    <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-high p-3 text-center transition-colors hover:bg-surface-highest">
+      <div className="block w-full">
+        <div className="text-xl">{SEGMENT_EMOJIS[segment]}</div>
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+          {segmentLabel}
+        </p>
+      </div>
+      <ScoreStars
+        value={score}
+        metricLabel={metricLabel}
+        segmentLabel={segmentLabel}
+        onScoreChange={onScoreChange}
+      />
+    </div>
+  );
+}
+
+function VoteMetricGroup({
+  title,
+  icon,
+  scores,
+  onScoreChange,
+  translations,
+}: {
+  title: string;
+  icon: ReactNode;
+  scores: ZoneCreationMetricScores;
+  onScoreChange: (segment: SegmentKey, score: ZoneRatingScore) => void;
+  translations: MapTranslations;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const summary = summarizeMetricScores(scores);
+  const shouldShowExpanded = isExpanded;
+
+  function handleApplyToAll(score: ZoneRatingScore): void {
+    for (const segment of SEGMENT_ORDER) {
+      onScoreChange(segment, score);
+    }
+  }
+
+  return (
+    <section className="space-y-4">
+      <MetricSummaryCard
+        title={title}
+        icon={icon}
+        summary={summary}
+        onScoreChange={handleApplyToAll}
+        isExpanded={shouldShowExpanded}
+        onToggleExpanded={() => setIsExpanded((current) => !current)}
+        translations={translations}
+      />
+      {shouldShowExpanded ? (
+        <div className="grid grid-cols-2 gap-3">
+          {SEGMENT_ORDER.map((segment) => (
+            <MetricSegmentCard
+              key={segment}
+              metricLabel={title}
+              segment={segment}
+              score={scores[segment]}
+              onScoreChange={(score) => onScoreChange(segment, score)}
+              translations={translations}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ZoneVotePanel({
+  detail,
+  isAuthenticated,
+  onRefreshDetail,
+  translations,
+}: {
+  detail: ZoneDetailDTO;
+  isAuthenticated: boolean;
+  onRefreshDetail: () => Promise<ZoneDetailDTO | null>;
+  translations: MapTranslations;
+}) {
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [formState, setFormState] = useState<VoteFormState>(() =>
+    createVoteFormState(detail),
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFormState(createVoteFormState(detail));
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  }, [detail]);
+
+  const hasExistingVote = useMemo(() => hasExistingViewerVote(detail), [detail]);
+
+  function handleMetricScoreChange(
+    category: "crime" | "foot_traffic" | "vigilance",
+    segment: SegmentKey,
+    score: ZoneRatingScore,
+  ) {
+    setFormState((current) => {
+      if (category === "crime") {
+        return {
+          ...current,
+          crimeScores: {
+            ...current.crimeScores,
+            [segment]: score,
+          },
+        };
+      }
+
+      if (category === "foot_traffic") {
+        return {
+          ...current,
+          footTrafficScores: {
+            ...current.footTrafficScores,
+            [segment]: score,
+          },
+        };
+      }
+
+      return {
+        ...current,
+        infrastructureScores: {
+          ...current.infrastructureScores,
+          vigilance: {
+            ...current.infrastructureScores.vigilance,
+            [segment]: score,
+          },
+        },
+      };
+    });
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  }
+
+  function handleInfrastructureScoreChange(
+    category: "lighting" | "cctv",
+    score: ZoneRatingScore,
+  ) {
+    setFormState((current) => ({
+      ...current,
+      infrastructureScores: {
+        ...current.infrastructureScores,
+        [category]: score,
+      },
+    }));
+    setSubmitError(null);
+    setSubmitSuccess(null);
+  }
+
+  async function handleSubmit() {
+    const ratings = buildZoneCreationRatingsPayload({
+      crimeScores: formState.crimeScores,
+      footTrafficScores: formState.footTrafficScores,
+      infrastructureScores: formState.infrastructureScores,
+    });
+
+    if (ratings.length === 0) {
+      setSubmitError(translations.zoneDetailVoteRequired);
+      setSubmitSuccess(null);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+
+    try {
+      const response = await fetch(`/api/zones/${detail.zone.id}/ratings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ratings,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? translations.zoneDetailVoteErrorFallback);
+      }
+
+      await onRefreshDetail();
+      setSubmitSuccess(translations.zoneDetailVoteSuccess);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : translations.zoneDetailVoteErrorFallback,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="rounded-[1.25rem] bg-surface-muted px-3.5 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+            {translations.zoneDetailVoteTitle}
+          </h3>
+          <p className="mt-2 text-sm text-text-secondary">
+            {isAuthenticated
+              ? translations.zoneDetailVoteSubtitleAuthenticated
+              : translations.zoneDetailVoteSubtitleAnonymous}
+          </p>
+        </div>
+        {!isAuthenticated ? (
+          <span className="rounded-full bg-surface-low px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-secondary ghost-outline">
+            {translations.zoneDetailVoteAnonymousBadge}
+          </span>
+        ) : null}
+      </div>
+
+      {!isComposerOpen ? (
+        <div className="mt-4">
+          <MetricSummaryCard
+            title={translations.zoneCreateMetricCrime}
+            icon={<CategoryIcon categorySlug="crime" />}
+            summary={summarizeMetricScores(formState.crimeScores)}
+            onScoreChange={() => setIsComposerOpen(true)}
+            isExpanded={false}
+            onToggleExpanded={() => setIsComposerOpen(true)}
+            actionLabel={translations.zoneDetailVoteOpen}
+            translations={translations}
+          />
+          <p className="mt-3 text-sm text-text-secondary">
+            {isAuthenticated && hasExistingVote
+              ? translations.zoneDetailVoteCurrentLabel
+              : isAuthenticated
+                ? translations.zoneDetailVoteSubtitleAuthenticated
+                : translations.zoneDetailVoteSubtitleAnonymous}
+          </p>
+        </div>
+      ) : null}
+
+      {isComposerOpen ? (
+        <>
+          {isAuthenticated && hasExistingVote ? (
+            <p className="mt-4 text-sm text-text-secondary">
+              {translations.zoneDetailVoteCurrentLabel}
+            </p>
+          ) : null}
+
+          <section className="mt-6">
+            <div className="border-b border-outline-variant/20 pb-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
+                {translations.zoneCreateSectionMetrics}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-6">
+              <VoteMetricGroup
+                title={translations.zoneCreateMetricCrime}
+                icon={<CategoryIcon categorySlug="crime" />}
+                scores={formState.crimeScores}
+                onScoreChange={(segment, score) =>
+                  handleMetricScoreChange("crime", segment, score)
+                }
+                translations={translations}
+              />
+
+              <VoteMetricGroup
+                title={translations.zoneCreateMetricFootTraffic}
+                icon={<CategoryIcon categorySlug="foot_traffic" />}
+                scores={formState.footTrafficScores}
+                onScoreChange={(segment, score) =>
+                  handleMetricScoreChange("foot_traffic", segment, score)
+                }
+                translations={translations}
+              />
+
+              <VoteMetricGroup
+                title={translations.zoneCreateInfrastructureVigilance}
+                icon={<CategoryIcon categorySlug="vigilance" />}
+                scores={formState.infrastructureScores.vigilance}
+                onScoreChange={(segment, score) =>
+                  handleMetricScoreChange("vigilance", segment, score)
+                }
+                translations={translations}
+              />
+            </div>
+          </section>
+
+          <section className="mt-6">
+            <div className="border-b border-outline-variant/20 pb-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
+                {translations.zoneCreateSectionInfrastructure}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon categorySlug="lighting" />
+                      <span>{translations.zoneCreateInfrastructureLighting}</span>
+                    </span>
+                  </span>
+                  <select
+                    value={formState.infrastructureScores.lighting ?? ""}
+                    onChange={(event) =>
+                      event.target.value
+                        ? handleInfrastructureScoreChange(
+                            "lighting",
+                            Number(event.target.value) as ZoneRatingScore,
+                          )
+                        : undefined
+                    }
+                    className="rounded-lg bg-surface-highest px-3 py-2 text-xs text-foreground outline-none"
+                  >
+                    <option value="">{translations.zoneCreateLightingPlaceholder}</option>
+                    {SCORE_OPTIONS.map((score) => (
+                      <option key={score} value={score}>
+                        {resolveScaleLabel(score, translations)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon categorySlug="cctv" />
+                      <span>{translations.zoneCreateInfrastructureCctv}</span>
+                    </span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {CCTV_OPTIONS.map((option) => {
+                    const isActive = formState.infrastructureScores.cctv === option.score;
+
+                    return (
+                      <button
+                        key={option.labelKey}
+                        type="button"
+                        onClick={() =>
+                          handleInfrastructureScoreChange("cctv", option.score)
+                        }
+                        aria-pressed={isActive}
+                        className={`rounded-lg px-3 py-2 text-[11px] font-semibold transition-all ${
+                          isActive
+                            ? option.activeClassName
+                            : "bg-surface-highest text-text-secondary hover:bg-surface-high"
+                        }`}
+                      >
+                        {translations[option.labelKey]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-text-secondary">
+                  {translations.zoneCreateInfrastructureCctvHint}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {submitError ? (
+            <p className="mt-3 text-sm text-danger-foreground">{submitError}</p>
+          ) : null}
+          {submitSuccess ? (
+            <p className="mt-3 text-sm text-tertiary">{submitSuccess}</p>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="mt-4 w-full rounded-[1rem] px-4 py-3 text-sm font-semibold text-primary-foreground primary-glow disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSubmitting
+              ? translations.zoneDetailVoteSubmitting
+              : isAuthenticated && hasExistingVote
+                ? translations.zoneDetailVoteUpdate
+                : translations.zoneDetailVoteSubmit}
+          </button>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 export type ZoneDetailCardProps = {
   lang: string;
   detail: ZoneDetailDTO | null;
   isLoading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
   onClose: () => void;
+  onRefreshDetail: () => Promise<ZoneDetailDTO | null>;
   translations: MapTranslations;
 };
 
@@ -410,7 +1002,9 @@ export function ZoneDetailCard({
   detail,
   isLoading,
   error,
+  isAuthenticated,
   onClose,
+  onRefreshDetail,
   translations,
 }: ZoneDetailCardProps) {
   if (!isLoading && !error && !detail) {
@@ -445,7 +1039,10 @@ export function ZoneDetailCard({
     const metricBlocks = categoryOrder
       .filter(
         (slug) =>
-          slug === "crime" || slug === "foot_traffic" || slug === "vigilance",
+          slug === "overall_safety" ||
+          slug === "crime" ||
+          slug === "foot_traffic" ||
+          slug === "vigilance",
       )
       .map((categorySlug) => (
         <CategoryMetricCard
@@ -553,6 +1150,13 @@ export function ZoneDetailCard({
             {translations.zoneDetailTrendCaption}
           </p>
         </section>
+
+        <ZoneVotePanel
+          detail={detail}
+          isAuthenticated={isAuthenticated}
+          onRefreshDetail={onRefreshDetail}
+          translations={translations}
+        />
 
         <section className="rounded-[1.25rem] bg-surface-muted px-3.5 py-3.5">
           <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">

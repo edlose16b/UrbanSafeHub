@@ -3,6 +3,7 @@ import type {
   ZoneCommentSnapshot,
   ZoneDetailSnapshot,
   ZoneRatingAggregateSnapshot,
+  ZoneViewerRatingSnapshot,
 } from "../domain/zone-detail";
 import type { ZoneDTO } from "./zone-dto";
 import { toZoneDTO } from "./zone-dto";
@@ -21,10 +22,17 @@ export type ZoneDetailCommentDTO = {
   createdAt: string;
 };
 
+export type ZoneDetailViewerRatingDTO = {
+  categorySlug: string;
+  timeSegment: TimeSegment | null;
+  score: number;
+};
+
 export type ZoneDetailDTO = {
   zone: ZoneDTO;
   aggregates: ZoneDetailAggregateDTO[];
   comments: ZoneDetailCommentDTO[];
+  viewerRatings: ZoneDetailViewerRatingDTO[];
 };
 
 function toAggregateDTO(
@@ -47,10 +55,21 @@ function toCommentDTO(comment: ZoneCommentSnapshot): ZoneDetailCommentDTO {
   };
 }
 
+function toViewerRatingDTO(
+  rating: ZoneViewerRatingSnapshot,
+): ZoneDetailViewerRatingDTO {
+  return {
+    categorySlug: rating.categorySlug,
+    timeSegment: rating.timeSegment,
+    score: rating.score,
+  };
+}
+
 export function toZoneDetailDTO(detail: ZoneDetailSnapshot): ZoneDetailDTO {
   return {
     zone: toZoneDTO(detail.zone),
     aggregates: detail.aggregates.map(toAggregateDTO),
     comments: detail.comments.map(toCommentDTO),
+    viewerRatings: detail.viewerRatings.map(toViewerRatingDTO),
   };
 }

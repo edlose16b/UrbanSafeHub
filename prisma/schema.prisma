@@ -107,18 +107,19 @@ model Zone {
 }
 
 model ZoneRating {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  zoneId       String       @map("zone_id") @db.Uuid
-  userId       String       @map("user_id") @db.Uuid
-  categorySlug String       @map("category_slug")
-  timeSegment  TimeSegment? @map("time_segment")
-  score        Int
-  isCurrent    Boolean      @default(true) @map("is_current")
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zoneId               String       @map("zone_id") @db.Uuid
+  userId               String?      @map("user_id") @db.Uuid
+  anonymousFingerprint String?      @map("anonymous_fingerprint")
+  categorySlug         String       @map("category_slug")
+  timeSegment          TimeSegment? @map("time_segment")
+  score                Int
+  isCurrent            Boolean      @default(true) @map("is_current")
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
 
   category RatingCategory @relation(fields: [categorySlug], references: [slug], onDelete: Restrict)
   zone     Zone           @relation(fields: [zoneId], references: [id], onDelete: Cascade)
-  user     Profile        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user     Profile?       @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([zoneId, categorySlug, timeSegment, isCurrent])
   @@map("zone_ratings")

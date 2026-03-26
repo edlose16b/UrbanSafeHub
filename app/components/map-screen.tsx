@@ -114,6 +114,7 @@ export type MapTranslations = {
   zoneDetailNoData: string;
   zoneDetailCategoryLabel: string;
   zoneDetailCategoryCrime: string;
+  zoneDetailCategoryOverallSafety: string;
   zoneDetailCategoryLighting: string;
   zoneDetailCategoryFootTraffic: string;
   zoneDetailCategoryVigilance: string;
@@ -141,6 +142,31 @@ export type MapTranslations = {
   zoneDetailInfrastructureTitle: string;
   zoneDetailTrendCaption: string;
   zoneDetailMetadataTitle: string;
+  zoneDetailVoteTitle: string;
+  zoneDetailVoteSubtitleAnonymous: string;
+  zoneDetailVoteSubtitleAuthenticated: string;
+  zoneDetailVoteSegmentLabel: string;
+  zoneDetailVoteOpen: string;
+  zoneDetailVoteCurrentLabel: string;
+  zoneDetailVoteAnonymousBadge: string;
+  zoneDetailVoteExpand: string;
+  zoneDetailVoteCollapse: string;
+  zoneDetailVoteOverallLabel: string;
+  zoneDetailVoteCrimeLabel: string;
+  zoneDetailVoteLightingLabel: string;
+  zoneDetailVoteFootTrafficLabel: string;
+  zoneDetailVoteSubmit: string;
+  zoneDetailVoteUpdate: string;
+  zoneDetailVoteSubmitting: string;
+  zoneDetailVoteSuccess: string;
+  zoneDetailVoteErrorFallback: string;
+  zoneDetailVoteOption1: string;
+  zoneDetailVoteOption2: string;
+  zoneDetailVoteOption3: string;
+  zoneDetailVoteOption4: string;
+  zoneDetailVoteOption5: string;
+  zoneDetailVoteDetailTitle: string;
+  zoneDetailVoteRequired: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

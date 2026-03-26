@@ -236,7 +236,7 @@ function MetricGroup({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const summary = summarizeMetricScores(scores);
-  const shouldShowExpanded = isExpanded && summary.hasAnyScore;
+  const shouldShowExpanded = isExpanded;
 
   function handleApplyToAll(score: ZoneRatingScore): void {
     for (const segment of SEGMENT_ORDER) {

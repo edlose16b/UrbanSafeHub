@@ -201,6 +201,7 @@ describe("useSelectedZoneDetail", () => {
       },
       aggregates: [],
       comments: [],
+      viewerRatings: [],
     };
     const fetchMock = vi.fn().mockResolvedValue(createZoneDetailResponse(detail));
     vi.stubGlobal("fetch", fetchMock);

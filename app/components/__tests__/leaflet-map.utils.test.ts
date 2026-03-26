@@ -185,6 +185,7 @@ describe("leaflet-map.utils", () => {
         { categorySlug: "crime", timeSegment: "early_morning", ratingsCount: 3, avgScore: 1.5 },
       ],
       comments: [],
+      viewerRatings: [],
     };
 
     expect(getZoneTrendSummary(detail)).toEqual({

@@ -8,9 +8,12 @@ import { useZoneCreation } from "../leaflet-map.hooks";
 import { SEGMENT_ORDER } from "@/lib/zones/rating-time-segments";
 
 const translations = dictionary.map as MapTranslations;
+type ZoneCreationHookResult = ReturnType<
+  typeof renderHook<ReturnType<typeof useZoneCreation>, Parameters<typeof useZoneCreation>[0]>
+>["result"];
 
 function fillRequiredRatings(
-  result: ReturnType<typeof renderHook<typeof useZoneCreation>>["result"],
+  result: ZoneCreationHookResult,
 ) {
   act(() => {
     for (const segment of SEGMENT_ORDER) {

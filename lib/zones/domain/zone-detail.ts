@@ -20,8 +20,15 @@ export type ZoneCommentSnapshot = {
   createdAt: string;
 };
 
+export type ZoneViewerRatingSnapshot = {
+  categorySlug: string;
+  timeSegment: TimeSegment | null;
+  score: number;
+};
+
 export type ZoneDetailSnapshot = {
   zone: ZoneSnapshot;
   aggregates: ZoneRatingAggregateSnapshot[];
   comments: ZoneCommentSnapshot[];
+  viewerRatings: ZoneViewerRatingSnapshot[];
 };

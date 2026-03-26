@@ -1,5 +1,6 @@
 import { GetVisibleZoneDetailUseCase } from "@/lib/zones/application/get-visible-zone-detail";
 import { toZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
+import { getCurrentAuthUserSnapshot } from "@/lib/auth/server/get-current-auth-user";
 import { SupabaseZoneRepository } from "@/lib/zones/infrastructure/supabase-zone-repository";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -30,7 +31,8 @@ export async function GET(
     const supabase = await getSupabaseServerClient();
     const repository = new SupabaseZoneRepository(supabase);
     const useCase = new GetVisibleZoneDetailUseCase(repository);
-    const detail = await useCase.execute(zoneId);
+    const viewer = await getCurrentAuthUserSnapshot();
+    const detail = await useCase.execute(zoneId, viewer.id);
 
     if (!detail) {
       return Response.json(

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ListVisibleNearCenterQuery,
+  SubmitZoneRatingsRecord,
   ZoneCommandRepository,
   ZoneQueryRepository,
 } from "../domain/ports";
@@ -9,6 +10,7 @@ import type {
   ZoneCommentSnapshot,
   ZoneDetailSnapshot,
   ZoneRatingAggregateSnapshot,
+  ZoneViewerRatingSnapshot,
 } from "../domain/zone-detail";
 import type {
   GeoJsonPosition,
@@ -51,6 +53,12 @@ type ZoneCommentRow = {
   user_id: string;
   body: string;
   created_at: string;
+};
+
+type ZoneViewerRatingRow = {
+  category_slug: string;
+  time_segment: TimeSegment | null;
+  score: number;
 };
 
 function isPosition(value: unknown): value is GeoJsonPosition {
@@ -184,6 +192,16 @@ function toCommentSnapshot(row: ZoneCommentRow): ZoneCommentSnapshot {
     userId: row.user_id,
     body: row.body,
     createdAt: row.created_at,
+  };
+}
+
+function toViewerRatingSnapshot(
+  row: ZoneViewerRatingRow,
+): ZoneViewerRatingSnapshot {
+  return {
+    categorySlug: row.category_slug,
+    timeSegment: row.time_segment,
+    score: Math.round(row.score),
   };
 }
 
@@ -370,7 +388,10 @@ export class SupabaseZoneRepository
     );
   }
 
-  async getVisibleDetailById(zoneId: string): Promise<ZoneDetailSnapshot | null> {
+  async getVisibleDetailById(
+    zoneId: string,
+    viewerUserId?: string | null,
+  ): Promise<ZoneDetailSnapshot | null> {
     const { data: zoneData, error: zoneError } = await this.supabase
       .from("zones")
       .select("id, name, description, geom, radius_m, created_by, created_at")
@@ -444,10 +465,34 @@ export class SupabaseZoneRepository
       toCommentSnapshot,
     );
 
+    let viewerRatings: ZoneViewerRatingSnapshot[] = [];
+
+    if (viewerUserId) {
+      const { data: viewerRatingData, error: viewerRatingError } = await this.supabase
+        .from("zone_ratings")
+        .select("category_slug, time_segment, score")
+        .eq("zone_id", zoneId)
+        .eq("user_id", viewerUserId)
+        .eq("is_current", true)
+        .order("category_slug", { ascending: true })
+        .order("time_segment", { ascending: true });
+
+      if (viewerRatingError) {
+        throw new Error(
+          `Unable to load viewer ratings: ${viewerRatingError.message}`,
+        );
+      }
+
+      viewerRatings = ((viewerRatingData ?? []) as ZoneViewerRatingRow[]).map(
+        toViewerRatingSnapshot,
+      );
+    }
+
     return {
       zone,
       aggregates,
       comments,
+      viewerRatings,
     };
   }
 
@@ -495,5 +540,31 @@ export class SupabaseZoneRepository
     }
 
     return toSnapshot(data as ZoneRow, null);
+  }
+
+  async submitRatings(record: SubmitZoneRatingsRecord): Promise<void> {
+    const actorConstraintSatisfied =
+      (record.userId !== null && record.anonymousFingerprint === null) ||
+      (record.userId === null && record.anonymousFingerprint !== null);
+
+    if (!actorConstraintSatisfied) {
+      throw new Error("Ratings require either a user id or an anonymous fingerprint.");
+    }
+
+    const rows = record.ratings.map((rating) => ({
+      zone_id: record.zoneId,
+      user_id: record.userId,
+      anonymous_fingerprint: record.anonymousFingerprint,
+      category_slug: rating.categorySlug,
+      time_segment: rating.timeSegment,
+      score: rating.score,
+      is_current: true,
+    }));
+
+    const { error } = await this.supabase.from("zone_ratings").insert(rows);
+
+    if (error) {
+      throw new Error(`Unable to submit zone ratings: ${error.message}`);
+    }
   }
 }

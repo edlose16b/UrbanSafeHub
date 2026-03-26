@@ -276,6 +276,7 @@ export default function LeafletMap({
     zoneDetailError,
     selectZone,
     clearSelectedZone,
+    refreshSelectedZone,
   } = useSelectedZoneDetail({
     detailFetchFailedFallback: translations.zoneDetailErrorFallback,
   });
@@ -563,7 +564,9 @@ export default function LeafletMap({
         detail={selectedZoneDetail}
         isLoading={isZoneDetailLoading}
         error={zoneDetailError}
+        isAuthenticated={isAuthenticated}
         onClose={clearSelectedZone}
+        onRefreshDetail={refreshSelectedZone}
         translations={translations}
       />
 

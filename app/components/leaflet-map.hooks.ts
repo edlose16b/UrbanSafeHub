@@ -510,6 +510,32 @@ export function useSelectedZoneDetail({
   const [isZoneDetailLoading, setIsZoneDetailLoading] = useState(false);
   const [zoneDetailError, setZoneDetailError] = useState<string | null>(null);
 
+  const fetchZoneDetail = useCallback(
+    async (zoneId: string, signal?: AbortSignal): Promise<ZoneDetailDTO | null> => {
+      const response = await fetch(`/api/zones/${zoneId}`, {
+        method: "GET",
+        cache: "no-store",
+        signal,
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        detail?: ZoneDetailDTO;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        const error = new Error(payload.error ?? detailFetchFailedFallback) as Error & {
+          fromResponse?: boolean;
+        };
+        error.fromResponse = true;
+        throw error;
+      }
+
+      return payload.detail ?? null;
+    },
+    [detailFetchFailedFallback],
+  );
+
   useEffect(() => {
     if (!selectedZoneId) {
       setSelectedZoneDetail(null);
@@ -525,29 +551,18 @@ export function useSelectedZoneDetail({
 
     void (async () => {
       try {
-        const response = await fetch(`/api/zones/${selectedZoneId}`, {
-          method: "GET",
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        const payload = (await response.json().catch(() => ({}))) as {
-          detail?: ZoneDetailDTO;
-          error?: string;
-        };
-
-        if (!response.ok) {
-          setZoneDetailError(payload.error ?? detailFetchFailedFallback);
-          setSelectedZoneDetail(null);
-          return;
-        }
-
-        setSelectedZoneDetail(payload.detail ?? null);
+        const detail = await fetchZoneDetail(selectedZoneId, controller.signal);
+        setSelectedZoneDetail(detail);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        setZoneDetailError(detailFetchFailedFallback);
+        setZoneDetailError(
+          error instanceof Error && "fromResponse" in error
+            ? error.message
+            : detailFetchFailedFallback,
+        );
+        setSelectedZoneDetail(null);
       } finally {
         setIsZoneDetailLoading(false);
       }
@@ -556,7 +571,7 @@ export function useSelectedZoneDetail({
     return () => {
       controller.abort();
     };
-  }, [detailFetchFailedFallback, selectedZoneId]);
+  }, [detailFetchFailedFallback, fetchZoneDetail, selectedZoneId]);
 
   const selectZone = useCallback((zoneId: string) => {
     setSelectedZoneId(zoneId);
@@ -566,6 +581,31 @@ export function useSelectedZoneDetail({
     setSelectedZoneId(null);
   }, []);
 
+  const refreshSelectedZone = useCallback(async () => {
+    if (!selectedZoneId) {
+      return null;
+    }
+
+    setIsZoneDetailLoading(true);
+    setZoneDetailError(null);
+
+    try {
+      const detail = await fetchZoneDetail(selectedZoneId);
+      setSelectedZoneDetail(detail);
+      return detail;
+    } catch (error) {
+      setZoneDetailError(
+        error instanceof Error && "fromResponse" in error
+          ? error.message
+          : detailFetchFailedFallback,
+      );
+      setSelectedZoneDetail(null);
+      return null;
+    } finally {
+      setIsZoneDetailLoading(false);
+    }
+  }, [detailFetchFailedFallback, fetchZoneDetail, selectedZoneId]);
+
   return {
     selectedZoneId,
     selectedZoneDetail,
@@ -573,5 +613,6 @@ export function useSelectedZoneDetail({
     zoneDetailError,
     selectZone,
     clearSelectedZone,
+    refreshSelectedZone,
   };
 }

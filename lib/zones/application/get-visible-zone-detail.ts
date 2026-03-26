@@ -4,7 +4,10 @@ import type { ZoneDetailSnapshot } from "../domain/zone-detail";
 export class GetVisibleZoneDetailUseCase {
   constructor(private readonly queryRepository: ZoneQueryRepository) {}
 
-  async execute(zoneId: string): Promise<ZoneDetailSnapshot | null> {
-    return this.queryRepository.getVisibleDetailById(zoneId);
+  async execute(
+    zoneId: string,
+    viewerUserId?: string | null,
+  ): Promise<ZoneDetailSnapshot | null> {
+    return this.queryRepository.getVisibleDetailById(zoneId, viewerUserId);
   }
 }

@@ -1,11 +1,15 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import dictionary from "@/app/i18n/dictionaries/en.json";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import type { MapTranslations } from "../map-screen";
 import { ZoneDetailCard } from "../zone-detail-card";
 
 const translations = dictionary.map as MapTranslations;
+
+afterEach(() => {
+  cleanup();
+});
 
 function createDetail(): ZoneDetailDTO {
   return {
@@ -47,6 +51,7 @@ function createDetail(): ZoneDetailDTO {
         createdAt: "2026-03-21T10:00:00.000Z",
       },
     ],
+    viewerRatings: [],
   };
 }
 
@@ -58,7 +63,9 @@ describe("ZoneDetailCard", () => {
         detail={createDetail()}
         isLoading={false}
         error={null}
+        isAuthenticated={false}
         onClose={() => {}}
+        onRefreshDetail={async () => null}
         translations={translations}
       />,
     );
@@ -87,7 +94,9 @@ describe("ZoneDetailCard", () => {
         detail={detail}
         isLoading={false}
         error={null}
+        isAuthenticated={false}
         onClose={() => {}}
+        onRefreshDetail={async () => null}
         translations={translations}
       />,
     );
@@ -107,7 +116,9 @@ describe("ZoneDetailCard", () => {
         detail={detail}
         isLoading={false}
         error={null}
+        isAuthenticated={false}
         onClose={() => {}}
+        onRefreshDetail={async () => null}
         translations={translations}
       />,
     );
@@ -122,7 +133,9 @@ describe("ZoneDetailCard", () => {
         detail={createDetail()}
         isLoading={false}
         error={null}
+        isAuthenticated={false}
         onClose={() => {}}
+        onRefreshDetail={async () => null}
         translations={translations}
       />,
     );
@@ -130,5 +143,82 @@ describe("ZoneDetailCard", () => {
     expect(screen.getAllByText("Recent comments").length).toBeGreaterThan(0);
     expect(screen.getAllByText("user-1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Point").length).toBeGreaterThan(0);
+  });
+
+  it("prefills the authenticated vote state for the active segment", () => {
+    const detail = createDetail();
+    detail.viewerRatings = [
+      { categorySlug: "crime", timeSegment: "morning", score: 3 },
+      { categorySlug: "lighting", timeSegment: null, score: 4 },
+    ];
+
+    render(
+      <ZoneDetailCard
+        lang="en"
+        detail={detail}
+        isLoading={false}
+        error={null}
+        isAuthenticated
+        onClose={() => {}}
+        onRefreshDetail={async () => null}
+        translations={translations}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Rate zone" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Customize schedule" })[0]);
+
+    expect(screen.getByText("You already voted for this time segment. Sending again will update your current rating.")).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "Crime safety · Morning · 3/5",
+      }).getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("expands the metric schedule editor using the creation-style UI", () => {
+    render(
+      <ZoneDetailCard
+        lang="en"
+        detail={createDetail()}
+        isLoading={false}
+        error={null}
+        isAuthenticated={false}
+        onClose={() => {}}
+        onRefreshDetail={async () => null}
+        translations={translations}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Rate zone" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Customize schedule" })[0]);
+
+    expect(
+      screen.getByRole("button", {
+        name: "Crime safety · Morning · 1/5",
+      }),
+    ).toBeTruthy();
+    expect(screen.getAllByText("Crime safety").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Lighting").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Morning").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the voting form hidden until the user opens it", () => {
+    render(
+      <ZoneDetailCard
+        lang="en"
+        detail={createDetail()}
+        isLoading={false}
+        error={null}
+        isAuthenticated={false}
+        onClose={() => {}}
+        onRefreshDetail={async () => null}
+        translations={translations}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: "Rate zone" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Time segment")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Submit rating" })).toBeNull();
   });
 });

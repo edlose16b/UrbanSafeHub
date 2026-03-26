@@ -27,10 +27,24 @@ export type ZoneRatingCategorySlug =
   | "foot_traffic"
   | "lighting"
   | "vigilance"
+  | "cctv"
+  | "overall_safety";
+
+export type SubmitZoneRatingCategorySlug =
+  | "crime"
+  | "lighting"
+  | "foot_traffic"
+  | "vigilance"
   | "cctv";
 
 export type CreateZoneRatingRecord = {
   categorySlug: ZoneRatingCategorySlug;
+  timeSegment: TimeSegment | null;
+  score: number;
+};
+
+export type SubmitZoneRatingRecord = {
+  categorySlug: SubmitZoneRatingCategorySlug;
   timeSegment: TimeSegment | null;
   score: number;
 };
@@ -197,6 +211,19 @@ function isValidCategorySlug(value: unknown): value is ZoneRatingCategorySlug {
     value === "foot_traffic" ||
     value === "lighting" ||
     value === "vigilance" ||
+    value === "cctv" ||
+    value === "overall_safety"
+  );
+}
+
+function isValidSubmitCategorySlug(
+  value: unknown,
+): value is SubmitZoneRatingCategorySlug {
+  return (
+    value === "crime" ||
+    value === "lighting" ||
+    value === "foot_traffic" ||
+    value === "vigilance" ||
     value === "cctv"
   );
 }
@@ -274,6 +301,80 @@ export function parseCreateZoneRatings(value: unknown): CreateZoneRatingRecord[]
       throw new ZoneValidationError(`Duplicate rating detected for ${key}.`);
     }
     seen.add(key);
+  }
+
+  return ratings;
+}
+
+export function parseSubmitZoneRatings(value: unknown): SubmitZoneRatingRecord[] {
+  if (!Array.isArray(value)) {
+    throw new ZoneValidationError("Vote ratings payload must be an array.");
+  }
+
+  const ratings = value.map((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      throw new ZoneValidationError(`Vote rating at index ${index} is invalid.`);
+    }
+
+    const candidate = entry as {
+      categorySlug?: unknown;
+      timeSegment?: unknown;
+      score?: unknown;
+    };
+
+    if (!isValidSubmitCategorySlug(candidate.categorySlug)) {
+      throw new ZoneValidationError(`Unknown vote category at index ${index}.`);
+    }
+
+    if (
+      !isFiniteNumber(candidate.score) ||
+      !Number.isInteger(candidate.score) ||
+      candidate.score < 1 ||
+      candidate.score > 5
+    ) {
+      throw new ZoneValidationError(
+        `Vote score at index ${index} must be between 1 and 5.`,
+      );
+    }
+
+    const expectsSegment =
+      candidate.categorySlug === "crime" ||
+      candidate.categorySlug === "foot_traffic" ||
+      candidate.categorySlug === "vigilance";
+
+    if (expectsSegment) {
+      if (!isValidTimeSegment(candidate.timeSegment)) {
+        throw new ZoneValidationError(
+          `Vote category ${candidate.categorySlug} requires a valid time segment.`,
+        );
+      }
+    } else if (candidate.timeSegment !== null && candidate.timeSegment !== undefined) {
+      throw new ZoneValidationError(
+        `Vote category ${candidate.categorySlug} does not allow a time segment.`,
+      );
+    }
+
+    return {
+      categorySlug: candidate.categorySlug,
+      timeSegment: expectsSegment ? (candidate.timeSegment as TimeSegment) : null,
+      score: Math.round(candidate.score),
+    } satisfies SubmitZoneRatingRecord;
+  });
+
+  const seen = new Set<string>();
+  for (const rating of ratings) {
+    const key = `${rating.categorySlug}:${rating.timeSegment ?? "general"}`;
+    if (seen.has(key)) {
+      throw new ZoneValidationError(
+        `Duplicate vote rating detected for ${key}.`,
+      );
+    }
+
+    seen.add(key);
+  }
+
+  if (ratings.length === 0) {
+    throw new ZoneValidationError("Votes must include at least one rating.");
   }
 
   return ratings;

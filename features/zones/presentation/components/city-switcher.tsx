@@ -74,7 +74,7 @@ export function CitySwitcher({
       </button>
 
       {isOpen ? (
-        <div className="glass-panel ghost-outline absolute top-full left-0 right-0 z-[1001] mt-2 overflow-hidden rounded-[1rem] text-foreground">
+        <div className="glass-panel ghost-outline absolute top-full left-0 right-0 z-[900] mt-2 overflow-hidden rounded-[1rem] text-foreground">
           <div className="border-b border-outline-variant/20 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-muted">
             {translations.citySwitcherPlaceholder}
           </div>

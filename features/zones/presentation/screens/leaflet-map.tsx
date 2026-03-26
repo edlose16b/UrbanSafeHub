@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CITY_OPTIONS, type CityOption } from "@/app/constants/cities";
 import AuthAvatarMenu from "@/features/auth/presentation/components/auth-avatar-menu";
 import { MapContainer, TileLayer } from "react-leaflet";
@@ -129,78 +129,6 @@ function FilterBar({
         ))}
       </div>
     </div>
-  );
-}
-
-function MobileBottomBar({
-  isLegendVisible,
-  createAction,
-  onMapTap,
-  onToggleFilters,
-  onToggleLegend,
-  onToggleTheme,
-  themeIcon,
-  themeIconClassName,
-  themeAriaLabel,
-  translations,
-  authMenu,
-}: {
-  isLegendVisible: boolean;
-  createAction: ReactNode;
-  onMapTap: () => void;
-  onToggleFilters: () => void;
-  onToggleLegend: () => void;
-  onToggleTheme: () => void;
-  themeIcon: string;
-  themeIconClassName: string;
-  themeAriaLabel: string;
-  translations: LeafletMapProps["translations"];
-  authMenu: ReactNode;
-}) {
-  return (
-    <footer className="glass-panel fixed inset-x-0 bottom-0 z-[1000] flex items-center justify-around rounded-t-[1.2rem] px-3 pb-4 pt-2 md:hidden">
-      <button
-        type="button"
-        onClick={onMapTap}
-        className="flex flex-col items-center gap-1 p-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground"
-      >
-        <span className="rounded-full bg-surface-high px-3 py-2">{translations.mobileNavMap}</span>
-      </button>
-      <button
-        type="button"
-        onClick={onToggleFilters}
-        className="flex flex-col items-center gap-1 p-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary"
-      >
-        <span>{translations.mobileNavFilter}</span>
-      </button>
-      <div className="flex flex-col items-center gap-1 p-2">{createAction}</div>
-      <button
-        type="button"
-        onClick={onToggleLegend}
-        className={`flex flex-col items-center gap-1 p-2 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-          isLegendVisible ? "text-foreground" : "text-text-secondary"
-        }`}
-      >
-        <span>{translations.mobileNavLegend}</span>
-      </button>
-      <button
-        type="button"
-        onClick={onToggleTheme}
-        aria-label={themeAriaLabel}
-        className="flex flex-col items-center gap-1 p-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-secondary"
-      >
-        <Image
-          src={themeIcon}
-          alt=""
-          width={18}
-          height={18}
-          aria-hidden
-          className={themeIconClassName}
-        />
-        <span>{translations.mobileNavTheme}</span>
-      </button>
-      <div className="flex flex-col items-center gap-1 p-2">{authMenu}</div>
-    </footer>
   );
 }
 
@@ -365,17 +293,6 @@ export default function LeafletMap({
       className="ghost-outline hidden rounded-[0.9rem] bg-primary px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
     />
   );
-  const mobileCreateAction = (
-    <CreateZoneButton
-      lang={lang}
-      isAuthenticated={isAuthenticated}
-      isCreateMode={isCreateMode}
-      onSetCreateMode={handleSetCreateMode}
-      translations={authTranslations}
-      className="rounded-full bg-surface-high px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-    />
-  );
-
   return (
     <div className="relative w-screen h-screen">
       <header className="absolute top-0 left-0 right-0 z-[1000]">
@@ -396,6 +313,7 @@ export default function LeafletMap({
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="md:hidden">{mobileAuthMenu}</div>
             <button
               type="button"
               onClick={() => setIsFilterBarVisible((current) => !current)}
@@ -440,12 +358,6 @@ export default function LeafletMap({
           onFilterChange={setActiveFilter}
           translations={translations}
           className={`${isFilterBarVisible ? "hidden md:block" : "hidden"} px-4 pb-3 md:px-6`}
-        />
-        <FilterBar
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-          translations={translations}
-          className="px-4 pb-2 md:hidden"
         />
       </header>
 
@@ -509,22 +421,6 @@ export default function LeafletMap({
         onClose={clearSelectedZone}
         onRefreshDetail={refreshSelectedZone}
         translations={translations}
-      />
-
-      <MobileBottomBar
-        isLegendVisible={isLegendVisible}
-        createAction={mobileCreateAction}
-        onMapTap={() => {
-          clearSelectedZone();
-        }}
-        onToggleFilters={() => setIsFilterBarVisible((current) => !current)}
-        onToggleLegend={() => setIsLegendVisible((current) => !current)}
-        onToggleTheme={toggleTheme}
-        themeIcon={toggleIcon}
-        themeIconClassName={iconClassName}
-        themeAriaLabel={themeAriaLabel}
-        translations={translations}
-        authMenu={mobileAuthMenu}
       />
 
       <MapContainer

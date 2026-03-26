@@ -79,6 +79,10 @@ export default function AuthAvatarMenu({
     return () => subscription.unsubscribe();
   }, [getCurrentUserUseCase, router, supabase.auth]);
 
+  useEffect(() => {
+    setCurrentUser(initialUser);
+  }, [initialUser]);
+
   async function handleGoogleSignIn() {
     setIsPending(true);
     try {
@@ -115,7 +119,7 @@ export default function AuthAvatarMenu({
     .toUpperCase();
 
   return (
-    <div className="relative z-[1000]" ref={menuRef}>
+    <div className="relative z-[1300]" ref={menuRef}>
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
@@ -136,7 +140,7 @@ export default function AuthAvatarMenu({
       </button>
 
       {isOpen ? (
-        <div className="glass-panel ghost-outline absolute right-0 z-[1100] mt-2 w-56 rounded-[1.1rem] p-2 text-sm text-foreground">
+        <div className="glass-panel ghost-outline absolute right-0 z-[1400] mt-2 w-56 rounded-[1.1rem] p-2 text-sm text-foreground">
           {currentUser.isAnonymous ? (
             <button
               type="button"
@@ -148,6 +152,14 @@ export default function AuthAvatarMenu({
             </button>
           ) : (
             <>
+              <div className="rounded-xl px-3 py-2.5">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {currentUser.displayName ?? currentUser.email ?? translations.anonymousLabel}
+                </p>
+                {currentUser.email ? (
+                  <p className="truncate text-xs text-text-secondary">{currentUser.email}</p>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={handleSignOut}

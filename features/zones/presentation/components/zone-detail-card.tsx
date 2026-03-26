@@ -1176,40 +1176,6 @@ export function ZoneDetailCard({
             </ul>
           )}
         </section>
-
-        <section className="rounded-[1.25rem] bg-surface-muted px-3.5 py-3.5 text-xs text-text-secondary">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
-            {translations.zoneDetailMetadataTitle}
-          </h3>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-[1rem] bg-surface-low px-3 py-3 ghost-outline">
-              <p>
-                <span className="text-text-muted">{translations.zoneDetailTypeLabel}</span>{" "}
-                <span className="text-foreground">{geometryTypeLabel}</span>
-              </p>
-              <p className="mt-1.5">
-                <span className="text-text-muted">
-                  {geometry.type === "Point"
-                    ? translations.zoneDetailRadiusLabel
-                    : translations.zoneDetailVerticesLabel}
-                </span>{" "}
-                <span className="text-foreground">
-                  {geometry.type === "Point" ? `${geometry.radiusM}m` : vertexCount}
-                </span>
-              </p>
-            </div>
-            <div className="rounded-[1rem] bg-surface-low px-3 py-3 ghost-outline">
-              <p>
-                <span className="text-text-muted">{translations.zoneDetailCreatedByLabel}</span>{" "}
-                <span className="text-foreground">{detail.zone.createdBy}</span>
-              </p>
-              <p className="mt-1.5">
-                <span className="text-text-muted">{translations.zoneDetailCreatedAtLabel}</span>{" "}
-                <span className="text-foreground">{createdAtLabel}</span>
-              </p>
-            </div>
-          </div>
-        </section>
       </div>
     );
   }

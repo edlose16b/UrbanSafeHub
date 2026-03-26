@@ -22,16 +22,14 @@ export type AuthMenuTranslations = {
 type AuthAvatarMenuProps = {
   lang: string;
   initialUser: AuthUserSnapshot;
-  isCreateMode: boolean;
-  onSetCreateMode: (nextValue: boolean) => void;
+  onSignedOut?: () => void;
   translations: AuthMenuTranslations;
 };
 
 export default function AuthAvatarMenu({
   lang,
   initialUser,
-  isCreateMode,
-  onSetCreateMode,
+  onSignedOut,
   translations,
 }: AuthAvatarMenuProps) {
   const router = useRouter();
@@ -107,7 +105,7 @@ export default function AuthAvatarMenu({
         avatarUrl: null,
         isAnonymous: true,
       });
-      onSetCreateMode(false);
+      onSignedOut?.();
       setIsOpen(false);
       router.refresh();
     } finally {
@@ -154,18 +152,6 @@ export default function AuthAvatarMenu({
             </button>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  onSetCreateMode(!isCreateMode);
-                  setIsOpen(false);
-                }}
-                className="w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-high"
-              >
-                {isCreateMode
-                  ? translations.exitCreateZone
-                  : translations.createZone}
-              </button>
               <button
                 type="button"
                 onClick={handleSignOut}

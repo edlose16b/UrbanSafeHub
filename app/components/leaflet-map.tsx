@@ -14,6 +14,7 @@ import {
 } from "../constants/map";
 import AuthAvatarMenu from "./auth-avatar-menu";
 import { CitySwitcher } from "./city-switcher";
+import { CreateZoneButton } from "./create-zone-button";
 import {
   FocusMapTarget,
   RecenterOnUserPosition,
@@ -133,6 +134,7 @@ function FilterBar({
 
 function MobileBottomBar({
   isLegendVisible,
+  createAction,
   onMapTap,
   onToggleFilters,
   onToggleLegend,
@@ -144,6 +146,7 @@ function MobileBottomBar({
   authMenu,
 }: {
   isLegendVisible: boolean;
+  createAction: ReactNode;
   onMapTap: () => void;
   onToggleFilters: () => void;
   onToggleLegend: () => void;
@@ -170,6 +173,7 @@ function MobileBottomBar({
       >
         <span>{translations.mobileNavFilter}</span>
       </button>
+      <div className="flex flex-col items-center gap-1 p-2">{createAction}</div>
       <button
         type="button"
         onClick={onToggleLegend}
@@ -339,8 +343,7 @@ export default function LeafletMap({
     <AuthAvatarMenu
       lang={lang}
       initialUser={initialUser}
-      isCreateMode={isCreateMode}
-      onSetCreateMode={handleSetCreateMode}
+      onSignedOut={() => handleSetCreateMode(false)}
       translations={authTranslations}
     />
   );
@@ -348,9 +351,28 @@ export default function LeafletMap({
     <AuthAvatarMenu
       lang={lang}
       initialUser={initialUser}
+      onSignedOut={() => handleSetCreateMode(false)}
+      translations={authTranslations}
+    />
+  );
+  const desktopCreateAction = (
+    <CreateZoneButton
+      lang={lang}
+      isAuthenticated={isAuthenticated}
       isCreateMode={isCreateMode}
       onSetCreateMode={handleSetCreateMode}
       translations={authTranslations}
+      className="ghost-outline hidden rounded-[0.9rem] bg-primary px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
+    />
+  );
+  const mobileCreateAction = (
+    <CreateZoneButton
+      lang={lang}
+      isAuthenticated={isAuthenticated}
+      isCreateMode={isCreateMode}
+      onSetCreateMode={handleSetCreateMode}
+      translations={authTranslations}
+      className="rounded-full bg-surface-high px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-60"
     />
   );
 
@@ -381,6 +403,7 @@ export default function LeafletMap({
             >
               {translations.filterToggleTitle}
             </button>
+            {desktopCreateAction}
             <button
               type="button"
               onClick={toggleTheme}
@@ -490,6 +513,7 @@ export default function LeafletMap({
 
       <MobileBottomBar
         isLegendVisible={isLegendVisible}
+        createAction={mobileCreateAction}
         onMapTap={() => {
           clearSelectedZone();
         }}

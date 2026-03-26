@@ -47,4 +47,6 @@ next-env.d.ts
 .cursor/
 PROJECT.md
 DATABASE.md
+skills-lock.json
+
 /app/generated/prisma

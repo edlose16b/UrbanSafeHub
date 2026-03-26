@@ -126,13 +126,20 @@
     "zoneDetailStatusModerate": "Alerta moderada",
     "zoneDetailStatusDanger": "Riesgo crítico",
     "zoneDetailStatusUnknown": "Reportes pendientes",
+    "zoneDetailStatusSummarySafe": "La comunidad percibe esta zona como consistente y favorable para desplazarse durante la mayor parte del día.",
+    "zoneDetailStatusSummaryModerate": "La zona muestra señales mixtas y conviene revisar las franjas horarias antes de transitarla.",
+    "zoneDetailStatusSummaryDanger": "Los reportes recientes sugieren mayor precaución, sobre todo en los momentos con menor actividad comunitaria.",
+    "zoneDetailStatusSummaryUnknown": "Todavía no hay suficientes señales para describir el comportamiento de esta zona con confianza.",
     "zoneDetailProfileTitle": "Perfil de seguridad",
     "zoneDetailProfileDayStronger": "Más sólida durante el día",
     "zoneDetailProfileNightStronger": "Más sólida de noche",
     "zoneDetailProfileSteady": "Estable entre franjas horarias",
     "zoneDetailProfileInsufficientData": "Aún no hay suficientes reportes",
     "zoneDetailCommentsCountLabel": "Comentarios visibles",
-    "zoneDetailRatingsCountLabel": "Señales"
+    "zoneDetailRatingsCountLabel": "Señales",
+    "zoneDetailInfrastructureTitle": "Infraestructura",
+    "zoneDetailTrendCaption": "Tendencia de seguridad basada en señales recientes de la comunidad.",
+    "zoneDetailMetadataTitle": "Datos de la zona"
   },
   "auth": {
     "anonymousLabel": "A",

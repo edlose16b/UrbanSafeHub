@@ -29,13 +29,29 @@ function createDetail(): ZoneDetailDTO {
       { categorySlug: "crime", timeSegment: "night", avgScore: 3, ratingsCount: 1 },
       { categorySlug: "crime", timeSegment: "early_morning", avgScore: 2, ratingsCount: 1 },
       { categorySlug: "lighting", timeSegment: null, avgScore: 4, ratingsCount: 4 },
+      { categorySlug: "foot_traffic", timeSegment: "morning", avgScore: 4.5, ratingsCount: 2 },
+      { categorySlug: "foot_traffic", timeSegment: "afternoon", avgScore: 4, ratingsCount: 2 },
+      { categorySlug: "foot_traffic", timeSegment: "night", avgScore: 3, ratingsCount: 1 },
+      { categorySlug: "foot_traffic", timeSegment: "early_morning", avgScore: 1.5, ratingsCount: 1 },
+      { categorySlug: "vigilance", timeSegment: "morning", avgScore: 5, ratingsCount: 2 },
+      { categorySlug: "vigilance", timeSegment: "afternoon", avgScore: 5, ratingsCount: 2 },
+      { categorySlug: "vigilance", timeSegment: "night", avgScore: 4.8, ratingsCount: 1 },
+      { categorySlug: "vigilance", timeSegment: "early_morning", avgScore: 4.5, ratingsCount: 1 },
+      { categorySlug: "cctv", timeSegment: null, avgScore: 4.6, ratingsCount: 4 },
     ],
-    comments: [],
+    comments: [
+      {
+        id: "comment-1",
+        userId: "user-1",
+        body: "Good lighting near the station entrance.",
+        createdAt: "2026-03-21T10:00:00.000Z",
+      },
+    ],
   };
 }
 
 describe("ZoneDetailCard", () => {
-  it("renders description, segment emojis, stars, averages, and counts", () => {
+  it("renders the hero, summaries, compact metrics, and secondary sections", () => {
     render(
       <ZoneDetailCard
         lang="en"
@@ -49,11 +65,14 @@ describe("ZoneDetailCard", () => {
 
     expect(screen.getByText("Near the main avenue and bus stop.")).toBeTruthy();
     expect(screen.getByAltText("Street view of Universitaria Hub")).toBeTruthy();
+    expect(screen.getByText("Safe hub")).toBeTruthy();
+    expect(screen.getByText("Infrastructure")).toBeTruthy();
+    expect(screen.getByText("Zone data")).toBeTruthy();
     expect(screen.getAllByText("☀️").length).toBeGreaterThan(0);
     expect(screen.getAllByText("🌙").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("★").length).toBeGreaterThan(10);
-    expect(screen.getByText("5.0/5")).toBeTruthy();
-    expect(screen.getByText("4 Signals")).toBeTruthy();
+    expect(screen.getAllByText("★").length).toBeGreaterThan(3);
+    expect(screen.getByLabelText("4.2/5")).toBeTruthy();
+    expect(screen.getByText("Good lighting near the station entrance.")).toBeTruthy();
   });
 
   it("shows no-data fallback for missing segment aggregates", () => {
@@ -73,7 +92,7 @@ describe("ZoneDetailCard", () => {
       />,
     );
 
-    expect(screen.getAllByText(translations.zoneDetailNoData).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
   it("derives the general score from segment averages when general aggregate is missing", () => {
@@ -93,7 +112,23 @@ describe("ZoneDetailCard", () => {
       />,
     );
 
-    expect(screen.getByText("3.5/5")).toBeTruthy();
-    expect(screen.getAllByText("6 Signals").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("3.5/5")).toBeTruthy();
+  });
+
+  it("keeps comments and metadata visible as lower-priority sections", () => {
+    render(
+      <ZoneDetailCard
+        lang="en"
+        detail={createDetail()}
+        isLoading={false}
+        error={null}
+        onClose={() => {}}
+        translations={translations}
+      />,
+    );
+
+    expect(screen.getAllByText("Recent comments").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("user-1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Point").length).toBeGreaterThan(0);
   });
 });

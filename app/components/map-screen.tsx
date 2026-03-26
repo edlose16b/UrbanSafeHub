@@ -127,6 +127,10 @@ export type MapTranslations = {
   zoneDetailStatusModerate: string;
   zoneDetailStatusDanger: string;
   zoneDetailStatusUnknown: string;
+  zoneDetailStatusSummarySafe: string;
+  zoneDetailStatusSummaryModerate: string;
+  zoneDetailStatusSummaryDanger: string;
+  zoneDetailStatusSummaryUnknown: string;
   zoneDetailProfileTitle: string;
   zoneDetailProfileDayStronger: string;
   zoneDetailProfileNightStronger: string;
@@ -134,6 +138,9 @@ export type MapTranslations = {
   zoneDetailProfileInsufficientData: string;
   zoneDetailCommentsCountLabel: string;
   zoneDetailRatingsCountLabel: string;
+  zoneDetailInfrastructureTitle: string;
+  zoneDetailTrendCaption: string;
+  zoneDetailMetadataTitle: string;
 };
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {

@@ -126,13 +126,20 @@
     "zoneDetailStatusModerate": "Moderate alert",
     "zoneDetailStatusDanger": "Critical risk",
     "zoneDetailStatusUnknown": "Pending reports",
+    "zoneDetailStatusSummarySafe": "The community sees this area as steady and favorable for moving through most of the day.",
+    "zoneDetailStatusSummaryModerate": "This zone shows mixed signals, so checking the time breakdown is recommended before passing through.",
+    "zoneDetailStatusSummaryDanger": "Recent reports suggest extra caution, especially during lower-activity time windows.",
+    "zoneDetailStatusSummaryUnknown": "There are not enough signals yet to describe how this zone behaves with confidence.",
     "zoneDetailProfileTitle": "Safety profile",
     "zoneDetailProfileDayStronger": "Stronger during the day",
     "zoneDetailProfileNightStronger": "Stronger after dark",
     "zoneDetailProfileSteady": "Stable across time segments",
     "zoneDetailProfileInsufficientData": "Not enough reports yet",
     "zoneDetailCommentsCountLabel": "Visible comments",
-    "zoneDetailRatingsCountLabel": "Signals"
+    "zoneDetailRatingsCountLabel": "Signals",
+    "zoneDetailInfrastructureTitle": "Infrastructure",
+    "zoneDetailTrendCaption": "Safety trend based on recent community signals.",
+    "zoneDetailMetadataTitle": "Zone data"
   },
   "auth": {
     "anonymousLabel": "A",

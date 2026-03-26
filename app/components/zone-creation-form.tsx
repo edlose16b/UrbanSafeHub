@@ -182,7 +182,6 @@ function MetricSummaryCard({
             <span>{SEGMENT_EMOJIS.night}</span>
             <span>{SEGMENT_EMOJIS.early_morning}</span>
           </div>
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
           <div>
             <h3 className="text-sm font-semibold text-foreground">{title}</h3>
             <p className="mt-1 text-xs text-text-secondary">{helperText}</p>

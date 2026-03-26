@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { CITY_OPTIONS, type CityOption } from "@/app/constants/cities";
+import AuthAvatarMenu from "@/features/auth/presentation/components/auth-avatar-menu";
 import { MapContainer, TileLayer } from "react-leaflet";
 import {
   INITIAL_ZOOM,
@@ -11,10 +12,9 @@ import {
   MAP_STYLE_ICON,
   MAP_TILE_STYLES,
   TILE_ATTRIBUTION,
-} from "../constants/map";
-import AuthAvatarMenu from "./auth-avatar-menu";
-import { CitySwitcher } from "./city-switcher";
-import { CreateZoneButton } from "./create-zone-button";
+} from "@/app/constants/map";
+import { CitySwitcher } from "../components/city-switcher";
+import { CreateZoneButton } from "../components/create-zone-button";
 import {
   FocusMapTarget,
   RecenterOnUserPosition,
@@ -23,22 +23,22 @@ import {
   ZoneCreationDraftLayer,
   ZoneCreationInteractionLayer,
   ZoneLayer,
-} from "./leaflet-map.layers";
+} from "../components/leaflet-map.layers";
 import {
   useMapTheme,
   useSelectedZoneDetail,
   useUserLocation,
   useZoneCreation,
   useZonesByViewport,
-} from "./leaflet-map.hooks";
-import type { LeafletMapProps } from "./leaflet-map.types";
-import { ZoneDetailCard } from "./zone-detail-card";
+} from "../hooks/leaflet-map.hooks";
+import type { LeafletMapProps } from "../types/leaflet-map.types";
+import { ZoneDetailCard } from "../components/zone-detail-card";
 import {
   getZoneCenter,
   zoneMatchesFilter,
   type ZoneFilterKey,
-} from "./leaflet-map.utils";
-import { ZoneCreationForm } from "./zone-creation-form";
+} from "../utils/leaflet-map.utils";
+import { ZoneCreationForm } from "../components/zone-creation-form";
 
 function LocationNotice({
   locationNotice,

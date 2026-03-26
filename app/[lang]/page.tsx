@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCurrentAuthUserSnapshot } from "@/lib/auth/server/get-current-auth-user";
-import MapScreen from "../components/map-screen";
+import MapScreen from "@/features/zones/presentation/screens/map-screen";
 import { hasLocale } from "../i18n/config";
 import { getDictionary } from "../i18n/get-dictionary";
 

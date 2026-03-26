@@ -5,9 +5,9 @@ import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { zoneGeometriesTouchOrIntersect } from "@/lib/zones/domain/geometry-overlap";
 import { DEFAULT_POINT_RADIUS_M, POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
 import type { ZoneGeometry } from "@/lib/zones/domain/zone";
-import type { MapTranslations } from "./map-screen";
-import type { LatLngPosition, LocationStatus, ViewportQuery } from "./leaflet-map.types";
 import type { SegmentKey } from "@/lib/zones/rating-time-segments";
+import type { MapTranslations } from "../types/map-translations";
+import type { LatLngPosition, LocationStatus, ViewportQuery } from "../types/leaflet-map.types";
 import {
   buildZoneCreationRatingsPayload,
   createEmptyInfrastructureScores,
@@ -15,11 +15,11 @@ import {
   type ZoneCreationInfrastructureScores,
   type ZoneCreationMetricScores,
   type ZoneRatingScore,
-} from "./zone-creation-form.utils";
+} from "../utils/zone-creation-form.utils";
 import {
   shouldFetchViewport,
   getInitialLocationStatus,
-} from "./leaflet-map.utils";
+} from "../utils/leaflet-map.utils";
 
 const VIEWPORT_FETCH_DEBOUNCE_MS = 900;
 

@@ -2,8 +2,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import dictionary from "@/app/i18n/dictionaries/en.json";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
-import type { MapTranslations } from "../map-screen";
-import { ZoneDetailCard } from "../zone-detail-card";
+import type { MapTranslations } from "../types/map-translations";
+import { ZoneDetailCard } from "../components/zone-detail-card";
 
 const translations = dictionary.map as MapTranslations;
 

@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import dictionary from "@/app/i18n/dictionaries/en.json";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
-import AuthAvatarMenu from "../auth-avatar-menu";
+import AuthAvatarMenu from "../components/auth-avatar-menu";
 
 const { refreshMock, signOutActionMock } = vi.hoisted(() => ({
   refreshMock: vi.fn(),
@@ -45,7 +45,7 @@ vi.mock("@/lib/auth/application/sign-in-with-google", () => ({
   },
 }));
 
-vi.mock("../auth-avatar-menu.actions", () => ({
+vi.mock("@/features/auth/actions/auth-avatar-menu.actions", () => ({
   signOutAction: signOutActionMock,
 }));
 

@@ -3,7 +3,7 @@ import {
   buildZoneCreationRatingsPayload,
   fillMetricScores,
   summarizeMetricScores,
-} from "../zone-creation-form.utils";
+} from "../utils/zone-creation-form.utils";
 
 describe("metric score helpers", () => {
   it("fills every time segment with the same score", () => {

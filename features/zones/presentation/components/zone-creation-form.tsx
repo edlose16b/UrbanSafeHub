@@ -9,11 +9,11 @@ import {
   UsersThreeIcon,
 } from "@phosphor-icons/react";
 import { POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
-import type { LeafletMapProps } from "./leaflet-map.types";
 import {
   SEGMENT_ORDER,
   type SegmentKey,
 } from "@/lib/zones/rating-time-segments";
+import type { LeafletMapProps } from "../types/leaflet-map.types";
 import {
   ScoreStars,
   SEGMENT_EMOJIS,
@@ -25,8 +25,8 @@ import type {
   ZoneCreationInfrastructureScores,
   ZoneCreationMetricScores,
   ZoneRatingScore,
-} from "./zone-creation-form.utils";
-import { summarizeMetricScores } from "./zone-creation-form.utils";
+} from "../utils/zone-creation-form.utils";
+import { summarizeMetricScores } from "../utils/zone-creation-form.utils";
 
 type ZoneCreationFormProps = {
   isVisible: boolean;

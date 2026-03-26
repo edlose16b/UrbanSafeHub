@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CITY_OPTIONS } from "@/app/constants/cities";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
-import type { ViewportQuery } from "../leaflet-map.types";
+import type { ViewportQuery } from "../types/leaflet-map.types";
 import {
   distanceBetweenViewportCentersMeters,
   getCrimeHeatColor,
@@ -12,7 +12,7 @@ import {
   getZoneTrendSummary,
   shouldFetchViewport,
   zoneMatchesFilter,
-} from "../leaflet-map.utils";
+} from "../utils/leaflet-map.utils";
 
 function metersToLatDelta(meters: number): number {
   return meters / 111_320;

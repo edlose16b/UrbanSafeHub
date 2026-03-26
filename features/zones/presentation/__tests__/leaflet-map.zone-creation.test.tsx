@@ -2,9 +2,9 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import dictionary from "@/app/i18n/dictionaries/en.json";
-import type { MapTranslations } from "../map-screen";
-import type { LatLngPosition } from "../leaflet-map.types";
-import { useZoneCreation } from "../leaflet-map.hooks";
+import type { MapTranslations } from "../types/map-translations";
+import type { LatLngPosition } from "../types/leaflet-map.types";
+import { useZoneCreation } from "../hooks/leaflet-map.hooks";
 import { SEGMENT_ORDER } from "@/lib/zones/rating-time-segments";
 
 const translations = dictionary.map as MapTranslations;

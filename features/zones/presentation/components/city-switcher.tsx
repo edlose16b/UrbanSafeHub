@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { CityOption } from "@/app/constants/cities";
-import type { MapTranslations } from "./map-screen";
+import type { MapTranslations } from "../types/map-translations";
 
 type CitySwitcherProps = {
   activeCity: CityOption;

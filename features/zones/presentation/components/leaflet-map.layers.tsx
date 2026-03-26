@@ -8,14 +8,14 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
-import type { MapTranslations } from "./map-screen";
-import type { LatLngPosition, ViewportQuery } from "./leaflet-map.types";
+import type { MapTranslations } from "../types/map-translations";
+import type { LatLngPosition, ViewportQuery } from "../types/leaflet-map.types";
 import {
   getCrimeHeatColor,
   getCrimeHeatIntensity,
   getZoneSeverity,
   toViewportQuery,
-} from "./leaflet-map.utils";
+} from "../utils/leaflet-map.utils";
 
 const USER_LOCATION_ZOOM = 16;
 const DRAFT_ZONE_STROKE = "#ff5352";

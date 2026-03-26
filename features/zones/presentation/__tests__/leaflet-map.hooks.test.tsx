@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
-import type { ViewportQuery } from "../leaflet-map.types";
-import { useSelectedZoneDetail, useZonesByViewport } from "../leaflet-map.hooks";
+import type { ViewportQuery } from "../types/leaflet-map.types";
+import { useSelectedZoneDetail, useZonesByViewport } from "../hooks/leaflet-map.hooks";
 
 function createZonesResponse() {
   return new Response(JSON.stringify({ zones: [] }), {

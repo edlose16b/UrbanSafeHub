@@ -1,7 +1,7 @@
 "use client";
 
 import type { SegmentKey } from "@/lib/zones/rating-time-segments";
-import type { MapTranslations } from "./map-screen";
+import type { MapTranslations } from "../types/map-translations";
 
 export const SCORE_OPTIONS = [1, 2, 3, 4, 5] as const;
 

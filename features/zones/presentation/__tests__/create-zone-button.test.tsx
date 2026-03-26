@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import dictionary from "@/app/i18n/dictionaries/en.json";
-import { CreateZoneButton } from "../create-zone-button";
+import { CreateZoneButton } from "../components/create-zone-button";
 
 const executeMock = vi.fn<(redirectTo: string) => Promise<void>>();
 

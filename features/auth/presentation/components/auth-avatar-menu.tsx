@@ -8,7 +8,7 @@ import { SignInWithGoogleUseCase } from "@/lib/auth/application/sign-in-with-goo
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
 import { SupabaseAuthProviderGateway } from "@/lib/auth/infrastructure/supabase-auth-provider-gateway";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { signOutAction } from "./auth-avatar-menu.actions";
+import { signOutAction } from "@/features/auth/actions/auth-avatar-menu.actions";
 
 export type AuthMenuTranslations = {
   anonymousLabel: string;

@@ -13,12 +13,12 @@ import {
 } from "@phosphor-icons/react";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { SEGMENT_ORDER, type SegmentKey } from "@/lib/zones/rating-time-segments";
-import type { MapTranslations } from "./map-screen";
+import type { MapTranslations } from "../types/map-translations";
 import {
   getZoneSeverity,
   getZoneStreetViewUrl,
   getZoneTrendSummary,
-} from "./leaflet-map.utils";
+} from "../utils/leaflet-map.utils";
 import {
   SEGMENT_EMOJIS,
   ScoreStars,
@@ -35,7 +35,7 @@ import {
   type ZoneCreationInfrastructureScores,
   type ZoneCreationMetricScores,
   type ZoneRatingScore,
-} from "./zone-creation-form.utils";
+} from "../utils/zone-creation-form.utils";
 
 const RATING_CATEGORY_ORDER = [
   "crime",

@@ -3,7 +3,7 @@ import type { ZoneGeometry } from "@/lib/zones/domain/zone";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import type { Map as LeafletMap } from "leaflet";
-import type { LocationStatus, ViewportQuery } from "./leaflet-map.types";
+import type { LocationStatus, ViewportQuery } from "../types/leaflet-map.types";
 
 const NO_CRIME_DATA_COLOR = "#7f8a93";
 const SAFE_COLOR = "#00a657";

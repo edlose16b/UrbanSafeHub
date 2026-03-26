@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Inter, Public_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import "leaflet/dist/leaflet.css";
-import ThemeProvider from "../components/theme-provider";
+import ThemeProvider from "@/shared/providers/theme-provider";
 import "../globals.css";
 import { hasLocale, SUPPORTED_LOCALES } from "../i18n/config";
 import { getDictionary } from "../i18n/get-dictionary";

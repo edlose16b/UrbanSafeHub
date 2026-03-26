@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { SignInWithGoogleUseCase } from "@/lib/auth/application/sign-in-with-google";
+import type { AuthMenuTranslations } from "@/features/auth/presentation/components/auth-avatar-menu";
 import { SupabaseAuthProviderGateway } from "@/lib/auth/infrastructure/supabase-auth-provider-gateway";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { AuthMenuTranslations } from "./auth-avatar-menu";
 
 type CreateZoneButtonProps = {
   lang: string;

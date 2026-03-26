@@ -1,6 +1,6 @@
+import type { AuthMenuTranslations } from "@/features/auth/presentation/components/auth-avatar-menu";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
-import type { MapTranslations } from "./map-screen";
-import type { AuthMenuTranslations } from "./auth-avatar-menu";
+import type { MapTranslations } from "./map-translations";
 
 export type LeafletMapProps = {
   lang: string;

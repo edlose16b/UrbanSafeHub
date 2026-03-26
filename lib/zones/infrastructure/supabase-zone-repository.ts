@@ -26,6 +26,7 @@ import { zoneGeometriesTouchOrIntersect } from "../domain/geometry-overlap";
 type ZoneRow = {
   id: string;
   name: string;
+  description: string | null;
   geom: unknown;
   radius_m: number | null;
   created_by: string;
@@ -140,6 +141,7 @@ function toSnapshot(row: ZoneRow, crimeLevel: number | null): ZoneSnapshot {
   return {
     id: row.id,
     name: row.name,
+    description: row.description,
     geometry: parseGeometry(row.geom, row.radius_m),
     crimeLevel,
     createdBy: row.created_by,
@@ -301,7 +303,7 @@ export class SupabaseZoneRepository
   ): Promise<ZoneSnapshot[]> {
     const { data, error } = await this.supabase
       .from("zones")
-      .select("id, name, geom, radius_m, created_by, created_at")
+      .select("id, name, description, geom, radius_m, created_by, created_at")
       .eq("visibility", "active")
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -371,7 +373,7 @@ export class SupabaseZoneRepository
   async getVisibleDetailById(zoneId: string): Promise<ZoneDetailSnapshot | null> {
     const { data: zoneData, error: zoneError } = await this.supabase
       .from("zones")
-      .select("id, name, geom, radius_m, created_by, created_at")
+      .select("id, name, description, geom, radius_m, created_by, created_at")
       .eq("id", zoneId)
       .eq("visibility", "active")
       .is("deleted_at", null)
@@ -467,7 +469,7 @@ export class SupabaseZoneRepository
         radius_m: record.geometry.type === "Point" ? record.geometry.radiusM : null,
         created_by: record.createdBy,
       })
-      .select("id, name, geom, radius_m, created_by, created_at")
+      .select("id, name, description, geom, radius_m, created_by, created_at")
       .single();
 
     if (error) {

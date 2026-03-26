@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   LampIcon,
   PoliceCarIcon,
@@ -14,6 +14,11 @@ import {
   SEGMENT_ORDER,
   type SegmentKey,
 } from "@/lib/zones/rating-time-segments";
+import {
+  ScoreStars,
+  SEGMENT_EMOJIS,
+  resolveSegmentLabel,
+} from "./zone-rating-ui";
 import type {
   MetricScoresSummary,
   NullableZoneRatingScore,
@@ -83,29 +88,6 @@ const CCTV_OPTIONS: readonly {
   },
 ] as const;
 
-const SEGMENT_EMOJIS: Record<SegmentKey, string> = {
-  morning: "☀️",
-  afternoon: "🌤️",
-  night: "🌙",
-  early_morning: "🌑",
-};
-
-function resolveSegmentLabel(
-  segment: SegmentKey,
-  translations: LeafletMapProps["translations"],
-): string {
-  switch (segment) {
-    case "morning":
-      return translations.zoneDetailSegmentMorning;
-    case "afternoon":
-      return translations.zoneDetailSegmentAfternoon;
-    case "night":
-      return translations.zoneDetailSegmentNight;
-    case "early_morning":
-      return translations.zoneDetailSegmentEarlyMorning;
-  }
-}
-
 function resolveScaleLabel(
   score: ZoneRatingScore,
   translations: LeafletMapProps["translations"],
@@ -122,22 +104,6 @@ function resolveScaleLabel(
     case 5:
       return translations.zoneCreateScoreOption5;
   }
-}
-
-function resolveMetricStarColor(score: NullableZoneRatingScore): string {
-  if (score === null) {
-    return "text-white/80";
-  }
-
-  if (score <= 2) {
-    return "text-primary";
-  }
-
-  if (score === 3) {
-    return "text-secondary";
-  }
-
-  return "text-tertiary";
 }
 
 function CategoryIcon({
@@ -163,42 +129,6 @@ function CategoryIcon({
     case "cctv":
       return <SecurityCameraIcon size={size} weight={weight} aria-hidden className={className} />;
   }
-}
-
-function ScoreStars({
-  value,
-  metricLabel,
-  segmentLabel,
-  onScoreChange,
-  className,
-}: {
-  value: NullableZoneRatingScore;
-  metricLabel: string;
-  segmentLabel: string;
-  onScoreChange: (score: ZoneRatingScore) => void;
-  className?: string;
-}) {
-  const activeColorClassName = resolveMetricStarColor(value);
-
-  return (
-    <div className={`flex items-center justify-center gap-1 ${className ?? ""}`}>
-      {SCORE_OPTIONS.map((score) => (
-        <button
-          key={score}
-          type="button"
-          onClick={() => onScoreChange(score)}
-          aria-label={`${metricLabel} · ${segmentLabel} · ${score}/5`}
-          aria-pressed={value === score}
-          className={`rounded-md p-1 text-lg leading-none transition-colors hover:scale-105 ${value !== null && score <= value
-            ? activeColorClassName
-            : "text-white/80"
-            }`}
-        >
-          ★
-        </button>
-      ))}
-    </div>
-  );
 }
 
 function MetricSummaryCard({
@@ -306,12 +236,7 @@ function MetricGroup({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const summary = summarizeMetricScores(scores);
-
-  useEffect(() => {
-    if (!summary.hasAnyScore) {
-      setIsExpanded(false);
-    }
-  }, [summary.hasAnyScore]);
+  const shouldShowExpanded = isExpanded && summary.hasAnyScore;
 
   function handleApplyToAll(score: ZoneRatingScore): void {
     for (const segment of SEGMENT_ORDER) {
@@ -326,11 +251,11 @@ function MetricGroup({
         icon={icon}
         summary={summary}
         onScoreChange={handleApplyToAll}
-        isExpanded={isExpanded}
+        isExpanded={shouldShowExpanded}
         onToggleExpanded={() => setIsExpanded((current) => !current)}
         translations={translations}
       />
-      {isExpanded ? (
+      {shouldShowExpanded ? (
         <div className="grid grid-cols-2 gap-3">
           {SEGMENT_ORDER.map((segment) => (
             <MetricSegmentCard
@@ -345,39 +270,6 @@ function MetricGroup({
         </div>
       ) : null}
     </section>
-  );
-}
-
-function InfrastructureScale({
-  value,
-  onChange,
-  translations,
-}: {
-  value: NullableZoneRatingScore;
-  onChange: (score: ZoneRatingScore) => void;
-  translations: LeafletMapProps["translations"];
-}) {
-  return (
-    <div className="grid grid-cols-5 gap-2">
-      {SCORE_OPTIONS.map((score) => {
-        const isActive = value === score;
-        return (
-          <button
-            key={score}
-            type="button"
-            onClick={() => onChange(score)}
-            aria-pressed={isActive}
-            aria-label={resolveScaleLabel(score, translations)}
-            className={`rounded-lg px-0 py-2 text-[11px] font-semibold transition-all ${isActive
-              ? "border border-primary/40 bg-primary text-primary-foreground"
-              : "bg-surface-highest text-text-secondary hover:bg-surface-high"
-              }`}
-          >
-            {score}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

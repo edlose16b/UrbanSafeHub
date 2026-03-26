@@ -102,6 +102,7 @@
     "zoneDetailVerticesLabel": "Vertices",
     "zoneDetailCreatedByLabel": "Created by",
     "zoneDetailCreatedAtLabel": "Created at",
+    "zoneDetailDescriptionLabel": "Context",
     "zoneDetailCrimeLabel": "Crime safety",
     "zoneDetailNoCrimeData": "No crime safety data",
     "zoneDetailRatingsTitle": "Scores",

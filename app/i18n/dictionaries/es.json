@@ -102,6 +102,7 @@
     "zoneDetailVerticesLabel": "Vértices",
     "zoneDetailCreatedByLabel": "Creado por",
     "zoneDetailCreatedAtLabel": "Creado el",
+    "zoneDetailDescriptionLabel": "Contexto",
     "zoneDetailCrimeLabel": "Seguridad frente al delito",
     "zoneDetailNoCrimeData": "Sin datos de seguridad frente al delito",
     "zoneDetailRatingsTitle": "Puntuaciones",

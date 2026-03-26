@@ -12,6 +12,11 @@ import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { SEGMENT_ORDER, type SegmentKey } from "@/lib/zones/rating-time-segments";
 import type { MapTranslations } from "./map-screen";
 import { getZoneSeverity, getZoneTrendSummary } from "./leaflet-map.utils";
+import {
+  ScoreStars,
+  SEGMENT_EMOJIS,
+  resolveSegmentLabel,
+} from "./zone-rating-ui";
 
 const RATING_CATEGORY_ORDER = [
   "crime",
@@ -31,14 +36,6 @@ function formatDateLabel(isoString: string, locale: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(parsed);
-}
-
-function formatAggregateValue(avgScore: number | null, ratingsCount: number): string {
-  if (avgScore === null || ratingsCount <= 0) {
-    return "—";
-  }
-
-  return `${avgScore.toFixed(2)} (${ratingsCount})`;
 }
 
 function resolveCategoryLabel(categorySlug: string, translations: MapTranslations): string {
@@ -102,67 +99,183 @@ function CategoryIcon({ categorySlug }: { categorySlug: string }) {
   return null;
 }
 
-function CategoryScoreBlock({
+function formatAverageScore(avgScore: number | null, ratingsCount: number): string {
+  if (avgScore === null || ratingsCount <= 0) {
+    return "—";
+  }
+
+  return `${avgScore.toFixed(1)}/5`;
+}
+
+function formatSignalsCount(ratingsCount: number, translations: MapTranslations): string {
+  return `${ratingsCount} ${translations.zoneDetailRatingsCountLabel}`;
+}
+
+function buildAggregateMap(detail: ZoneDetailDTO) {
+  const aggregateByCell = new Map<
+    string,
+    { avgScore: number | null; ratingsCount: number }
+  >();
+
+  for (const aggregate of detail.aggregates) {
+    const segmentKey = aggregate.timeSegment ?? "general";
+    aggregateByCell.set(`${aggregate.categorySlug}:${segmentKey}`, {
+      avgScore: aggregate.avgScore,
+      ratingsCount: aggregate.ratingsCount,
+    });
+  }
+
+  return aggregateByCell;
+}
+
+function getDerivedGeneralAggregate(
+  categorySlug: string,
+  aggregateByCell: Map<string, { avgScore: number | null; ratingsCount: number }>,
+) {
+  const segmentAggregates = SEGMENT_ORDER.map((segmentKey) =>
+    aggregateByCell.get(`${categorySlug}:${segmentKey}`),
+  ).filter(
+    (aggregate): aggregate is { avgScore: number | null; ratingsCount: number } =>
+      aggregate !== undefined && aggregate.avgScore !== null && aggregate.ratingsCount > 0,
+  );
+
+  if (segmentAggregates.length === 0) {
+    return null;
+  }
+
+  const averageScore =
+    segmentAggregates.reduce((sum, aggregate) => sum + (aggregate.avgScore ?? 0), 0) /
+    segmentAggregates.length;
+  const ratingsCount = segmentAggregates.reduce(
+    (sum, aggregate) => sum + aggregate.ratingsCount,
+    0,
+  );
+
+  return {
+    avgScore: averageScore,
+    ratingsCount,
+  };
+}
+
+function resolveGeneralAggregate(
+  categorySlug: string,
+  aggregateByCell: Map<string, { avgScore: number | null; ratingsCount: number }>,
+) {
+  return (
+    aggregateByCell.get(`${categorySlug}:general`) ??
+    getDerivedGeneralAggregate(categorySlug, aggregateByCell)
+  );
+}
+
+function categoryUsesSegments(categorySlug: string): boolean {
+  return categorySlug === "crime" || categorySlug === "foot_traffic" || categorySlug === "vigilance";
+}
+
+function SegmentAggregateCard({
   categorySlug,
-  valueByCell,
+  segmentKey,
+  aggregateByCell,
   segmentLabelByKey,
   translations,
 }: {
   categorySlug: string;
-  valueByCell: Map<string, string>;
+  segmentKey: SegmentKey;
+  aggregateByCell: Map<string, { avgScore: number | null; ratingsCount: number }>;
   segmentLabelByKey: Record<SegmentKey, string>;
   translations: MapTranslations;
 }) {
-  const segmentRows: { segmentKey: SegmentKey | "general"; label: string }[] = [
-    ...SEGMENT_ORDER.map((segmentKey) => ({
-      segmentKey,
-      label: segmentLabelByKey[segmentKey],
-    })),
-    {
-      segmentKey: "general",
-      label: translations.zoneDetailSegmentGeneral,
-    },
-  ];
+  const aggregate = aggregateByCell.get(`${categorySlug}:${segmentKey}`) ?? null;
+  const scoreValue =
+    aggregate && aggregate.avgScore !== null && aggregate.ratingsCount > 0
+      ? aggregate.avgScore
+      : null;
+  const segmentLabel = segmentLabelByKey[segmentKey];
 
   return (
-    <div className="rounded-[1rem] bg-surface-muted px-3.5 py-3">
-      <p className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-        <CategoryIcon categorySlug={categorySlug} />
-        <span>{resolveCategoryLabel(categorySlug, translations)}</span>
+    <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-high p-3 text-center">
+      <div className="text-xl">{SEGMENT_EMOJIS[segmentKey]}</div>
+      <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+        {segmentLabel}
       </p>
-      <ul className="mt-2.5 space-y-1.5">
-        {segmentRows.map(({ segmentKey, label }) => {
-          const mapKey = `${categorySlug}:${segmentKey}`;
-          const value = valueByCell.get(mapKey) ?? translations.zoneDetailNoData;
-
-          return (
-            <li
-              key={mapKey}
-              className="flex items-baseline justify-between gap-4 rounded-[0.85rem] bg-surface-high/70 px-2.5 py-2"
-            >
-              <span className="text-xs text-text-secondary">{label}</span>
-              <span className="shrink-0 tabular-nums text-sm font-medium text-foreground">
-                {value}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      <ScoreStars
+        value={scoreValue}
+        metricLabel={resolveCategoryLabel(categorySlug, translations)}
+        segmentLabel={segmentLabel}
+        className="mt-2"
+      />
+      <p className="mt-1 text-xs font-medium text-foreground">
+        {aggregate
+          ? formatAverageScore(aggregate.avgScore, aggregate.ratingsCount)
+          : translations.zoneDetailNoData}
+      </p>
+      <p className="mt-1 text-[11px] text-text-secondary">
+        {aggregate
+          ? formatSignalsCount(aggregate.ratingsCount, translations)
+          : translations.zoneDetailNoData}
+      </p>
     </div>
   );
 }
 
-function buildAggregateValueMap(detail: ZoneDetailDTO): Map<string, string> {
-  const valueByCell = new Map<string, string>();
-  for (const aggregate of detail.aggregates) {
-    const segmentKey = aggregate.timeSegment ?? "general";
-    const mapKey = `${aggregate.categorySlug}:${segmentKey}`;
-    valueByCell.set(
-      mapKey,
-      formatAggregateValue(aggregate.avgScore, aggregate.ratingsCount),
-    );
-  }
-  return valueByCell;
+function CategoryScoreBlock({
+  categorySlug,
+  aggregateByCell,
+  segmentLabelByKey,
+  translations,
+}: {
+  categorySlug: string;
+  aggregateByCell: Map<string, { avgScore: number | null; ratingsCount: number }>;
+  segmentLabelByKey: Record<SegmentKey, string>;
+  translations: MapTranslations;
+}) {
+  const title = resolveCategoryLabel(categorySlug, translations);
+  const generalAggregate = resolveGeneralAggregate(categorySlug, aggregateByCell);
+  const hasSegmentedLayout = categoryUsesSegments(categorySlug);
+  const summaryLabel = generalAggregate
+    ? formatAverageScore(generalAggregate.avgScore, generalAggregate.ratingsCount)
+    : translations.zoneDetailNoData;
+
+  return (
+    <div className="rounded-[1rem] bg-surface-muted px-3.5 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <p className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+          <CategoryIcon categorySlug={categorySlug} />
+          <span>{title}</span>
+        </p>
+        <div className="rounded-[0.85rem] bg-surface-high/70 px-3 py-2 text-right">
+          <ScoreStars
+            value={
+              generalAggregate && generalAggregate.avgScore !== null && generalAggregate.ratingsCount > 0
+                ? generalAggregate.avgScore
+                : null
+            }
+            metricLabel={title}
+            segmentLabel={translations.zoneDetailSegmentGeneral}
+          />
+          <p className="mt-1 text-xs font-medium text-foreground">{summaryLabel}</p>
+          <p className="mt-1 text-[11px] text-text-secondary">
+            {generalAggregate
+              ? formatSignalsCount(generalAggregate.ratingsCount, translations)
+              : translations.zoneDetailNoData}
+          </p>
+        </div>
+      </div>
+      {hasSegmentedLayout ? (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {SEGMENT_ORDER.map((segmentKey) => (
+            <SegmentAggregateCard
+              key={`${categorySlug}:${segmentKey}`}
+              categorySlug={categorySlug}
+              segmentKey={segmentKey}
+              aggregateByCell={aggregateByCell}
+              segmentLabelByKey={segmentLabelByKey}
+              translations={translations}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function resolveCategoryOrder(detail: ZoneDetailDTO): string[] {
@@ -260,10 +373,10 @@ export function ZoneDetailCard({
 
   const locale = lang === "es" ? "es-PE" : "en-US";
   const segmentLabelByKey: Record<SegmentKey, string> = {
-    morning: translations.zoneDetailSegmentMorning,
-    afternoon: translations.zoneDetailSegmentAfternoon,
-    night: translations.zoneDetailSegmentNight,
-    early_morning: translations.zoneDetailSegmentEarlyMorning,
+    morning: resolveSegmentLabel("morning", translations),
+    afternoon: resolveSegmentLabel("afternoon", translations),
+    night: resolveSegmentLabel("night", translations),
+    early_morning: resolveSegmentLabel("early_morning", translations),
   };
 
   let content: ReactNode = null;
@@ -291,17 +404,17 @@ export function ZoneDetailCard({
     const signalsCount = getSignalsCount(detail);
     const latestComment = detail.comments[0]?.body ?? translations.zoneDetailNoComments;
 
-    const valueByCell = buildAggregateValueMap(detail);
+    const aggregateByCell = buildAggregateMap(detail);
 
     const categoryOrder = resolveCategoryOrder(detail);
 
     const crimeBlock = (
-      <CategoryScoreBlock
-        categorySlug="crime"
-        valueByCell={valueByCell}
-        segmentLabelByKey={segmentLabelByKey}
-        translations={translations}
-      />
+        <CategoryScoreBlock
+          categorySlug="crime"
+          aggregateByCell={aggregateByCell}
+          segmentLabelByKey={segmentLabelByKey}
+          translations={translations}
+        />
     );
 
     const otherCategoryBlocks = categoryOrder.filter((slug) => slug !== "crime").map(
@@ -309,7 +422,7 @@ export function ZoneDetailCard({
         <CategoryScoreBlock
           key={categorySlug}
           categorySlug={categorySlug}
-          valueByCell={valueByCell}
+          aggregateByCell={aggregateByCell}
           segmentLabelByKey={segmentLabelByKey}
           translations={translations}
         />
@@ -356,6 +469,17 @@ export function ZoneDetailCard({
             </div>
           </div>
         </section>
+
+        {detail.zone.description ? (
+          <section className="rounded-[1rem] bg-surface-muted px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+              {translations.zoneDetailDescriptionLabel}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground">
+              {detail.zone.description}
+            </p>
+          </section>
+        ) : null}
 
         <section>
           <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-text-muted">

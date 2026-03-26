@@ -37,6 +37,7 @@ describe("useZoneCreation", () => {
     const createdZone: ZoneDTO = {
       id: "zone-1",
       name: "Test point",
+      description: "Draft description",
       geometry: {
         type: "Point",
         coordinates: [baseLng, baseLat],

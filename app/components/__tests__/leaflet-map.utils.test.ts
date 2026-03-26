@@ -94,6 +94,7 @@ describe("leaflet-map.utils", () => {
     const zone: ZoneDTO = {
       id: "zone-1",
       name: "Avenida Central",
+      description: null,
       geometry: {
         type: "Point",
         coordinates: [-77.1, -12.1],
@@ -147,6 +148,7 @@ describe("leaflet-map.utils", () => {
       zone: {
         id: "zone-1",
         name: "Avenida Central",
+        description: null,
         geometry: {
           type: "Point",
           coordinates: [-77.0428, -12.0464],

@@ -189,6 +189,7 @@ describe("useSelectedZoneDetail", () => {
       zone: {
         id: "zone-1",
         name: "Zona 1",
+        description: "Cerca a la avenida principal",
         geometry: {
           type: "Point",
           coordinates: [-77.0428, -12.0464],

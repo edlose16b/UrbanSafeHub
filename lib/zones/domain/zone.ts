@@ -16,6 +16,7 @@ export type ZoneGeometry = GeoJsonPoint | GeoJsonPolygon;
 export type ZoneSnapshot = {
   id: string;
   name: string;
+  description: string | null;
   geometry: ZoneGeometry;
   crimeLevel: number | null;
   createdBy: string;

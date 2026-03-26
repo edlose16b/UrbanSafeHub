@@ -103,6 +103,7 @@ export type MapTranslations = {
   zoneDetailVerticesLabel: string;
   zoneDetailCreatedByLabel: string;
   zoneDetailCreatedAtLabel: string;
+  zoneDetailDescriptionLabel: string;
   zoneDetailCrimeLabel: string;
   zoneDetailNoCrimeData: string;
   zoneDetailRatingsTitle: string;

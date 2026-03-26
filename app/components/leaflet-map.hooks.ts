@@ -224,6 +224,7 @@ type ZoneCreationHookOptions = {
   existingZones: ZoneDTO[];
   translations: MapTranslations;
   onZoneCreated: (zone: ZoneDTO) => void;
+  onSubmitSuccess?: () => void;
 };
 
 function clampPointRadiusM(value: number): number {
@@ -242,6 +243,7 @@ export function useZoneCreation({
   existingZones,
   translations,
   onZoneCreated,
+  onSubmitSuccess,
 }: ZoneCreationHookOptions) {
   const [zoneName, setZoneName] = useState("");
   const [zoneDescription, setZoneDescription] = useState("");
@@ -440,6 +442,7 @@ export function useZoneCreation({
 
       resetCreationState();
       setSubmitSuccess(translations.zoneCreateSuccess);
+      onSubmitSuccess?.();
       return true;
     } catch {
       setSubmitError(translations.zoneCreateFailedFallback);
@@ -455,6 +458,7 @@ export function useZoneCreation({
     infrastructureScores,
     isSubmitting,
     onZoneCreated,
+    onSubmitSuccess,
     pointCenter,
     pointRadiusM,
     resetCreationState,

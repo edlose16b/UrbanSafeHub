@@ -202,4 +202,9 @@ body {
     );
     box-shadow: var(--button-glow);
   }
+
+  .leaflet-container:focus,
+  .leaflet-interactive:focus {
+    outline: none;
+  }
 }

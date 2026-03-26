@@ -283,6 +283,18 @@ export default function LeafletMap({
   const isAuthenticated = !initialUser.isAnonymous;
   const isCreatePanelVisible = isAuthenticated && isCreateMode;
   const effectiveCanCreateZone = isCreatePanelVisible && hasAcceptedTerms;
+
+  function handleSetCreateMode(nextValue: boolean) {
+    setIsCreateMode(nextValue);
+    if (nextValue) {
+      clearSelectedZone();
+    }
+    if (!nextValue) {
+      setHasAcceptedTerms(false);
+      resetCreationState();
+    }
+  }
+
   const {
     zoneName,
     zoneDescription,
@@ -308,21 +320,8 @@ export default function LeafletMap({
     existingZones: zones,
     translations,
     onZoneCreated: prependZone,
+    onSubmitSuccess: () => handleSetCreateMode(false),
   });
-
-  const handleSetCreateMode = useCallback(
-    (nextValue: boolean) => {
-      setIsCreateMode(nextValue);
-      if (nextValue) {
-        clearSelectedZone();
-      }
-      if (!nextValue) {
-        setHasAcceptedTerms(false);
-        resetCreationState();
-      }
-    },
-    [clearSelectedZone, resetCreationState],
-  );
 
   const handleAcceptedTermsChange = useCallback(
     (checked: boolean) => {

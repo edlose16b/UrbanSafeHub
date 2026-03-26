@@ -61,13 +61,6 @@ type ZoneViewerRatingRow = {
   score: number;
 };
 
-type AnonymousVoteActorUpsertRow = {
-  fingerprint_hash: string;
-  last_ip_hash: string | null;
-  last_user_agent_hash: string | null;
-  last_zone_id: string;
-};
-
 function isPosition(value: unknown): value is GeoJsonPosition {
   if (!Array.isArray(value) || value.length !== 2) {
     return false;
@@ -556,25 +549,6 @@ export class SupabaseZoneRepository
 
     if (!actorConstraintSatisfied) {
       throw new Error("Ratings require either a user id or an anonymous fingerprint.");
-    }
-
-    if (record.anonymousActor) {
-      const actorRow: AnonymousVoteActorUpsertRow = {
-        fingerprint_hash: record.anonymousActor.fingerprintHash,
-        last_ip_hash: record.anonymousActor.ipHash,
-        last_user_agent_hash: record.anonymousActor.userAgentHash,
-        last_zone_id: record.zoneId,
-      };
-
-      const { error: actorError } = await this.supabase
-        .from("anonymous_vote_actors")
-        .upsert(actorRow, { onConflict: "fingerprint_hash" });
-
-      if (actorError) {
-        throw new Error(
-          `Unable to record anonymous vote actor: ${actorError.message}`,
-        );
-      }
     }
 
     const rows = record.ratings.map((rating) => ({

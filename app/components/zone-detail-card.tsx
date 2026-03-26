@@ -46,8 +46,7 @@ const RATING_CATEGORY_ORDER = [
   "cctv",
 ] as const;
 const GOOGLE_STREET_VIEW_API_KEY =
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
-  "AIzaSyCFQEyoMlFjj9PlMAYdMrzxB0x8OilWwvQ";
+  process.env.NEXT_PUBLIC_GOOGLE_STREET_VIEW_API_KEY ?? "";
 
 function formatDateLabel(isoString: string, locale: string): string {
   const parsed = new Date(isoString);
@@ -424,9 +423,9 @@ function getProfileLabel(detail: ZoneDetailDTO, translations: MapTranslations): 
 const SCORE_OPTIONS: readonly ZoneRatingScore[] = [1, 2, 3, 4, 5] as const;
 const CCTV_OPTIONS: readonly {
   labelKey:
-    | "zoneCreateInfrastructureCctvNone"
-    | "zoneCreateInfrastructureCctvFew"
-    | "zoneCreateInfrastructureCctvGood";
+  | "zoneCreateInfrastructureCctvNone"
+  | "zoneCreateInfrastructureCctvFew"
+  | "zoneCreateInfrastructureCctvGood";
   score: ZoneRatingScore;
   activeClassName: string;
 }[] = [
@@ -562,8 +561,8 @@ function MetricSummaryCard({
         >
           {actionLabel ??
             (isExpanded
-            ? translations.zoneCreateMetricHideSchedule
-            : translations.zoneCreateMetricCustomizeSchedule)}
+              ? translations.zoneCreateMetricHideSchedule
+              : translations.zoneCreateMetricCustomizeSchedule)}
         </button>
       </div>
       <ScoreStars
@@ -905,9 +904,9 @@ function ZoneVotePanel({
                     onChange={(event) =>
                       event.target.value
                         ? handleInfrastructureScoreChange(
-                            "lighting",
-                            Number(event.target.value) as ZoneRatingScore,
-                          )
+                          "lighting",
+                          Number(event.target.value) as ZoneRatingScore,
+                        )
                         : undefined
                     }
                     className="rounded-lg bg-surface-highest px-3 py-2 text-xs text-foreground outline-none"
@@ -943,11 +942,10 @@ function ZoneVotePanel({
                           handleInfrastructureScoreChange("cctv", option.score)
                         }
                         aria-pressed={isActive}
-                        className={`rounded-lg px-3 py-2 text-[11px] font-semibold transition-all ${
-                          isActive
-                            ? option.activeClassName
-                            : "bg-surface-highest text-text-secondary hover:bg-surface-high"
-                        }`}
+                        className={`rounded-lg px-3 py-2 text-[11px] font-semibold transition-all ${isActive
+                          ? option.activeClassName
+                          : "bg-surface-highest text-text-secondary hover:bg-surface-high"
+                          }`}
                       >
                         {translations[option.labelKey]}
                       </button>
@@ -1020,7 +1018,9 @@ export function ZoneDetailCard({
     content = <p className="px-1 text-sm text-danger-foreground">{error}</p>;
   } else if (detail) {
     const geometry = detail.zone.geometry;
-    const streetViewUrl = getZoneStreetViewUrl(geometry, GOOGLE_STREET_VIEW_API_KEY);
+    const streetViewUrl = GOOGLE_STREET_VIEW_API_KEY
+      ? getZoneStreetViewUrl(geometry, GOOGLE_STREET_VIEW_API_KEY)
+      : null;
     const geometryTypeLabel =
       geometry.type === "Point"
         ? translations.zoneDetailTypePoint
@@ -1057,14 +1057,18 @@ export function ZoneDetailCard({
       <div className="space-y-4">
         <section className="overflow-hidden rounded-[1.6rem] bg-surface-solid shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
           <div className="relative aspect-[16/10] overflow-hidden bg-surface-high">
-            <Image
-              src={streetViewUrl}
-              alt={resolveStreetViewAlt(detail.zone.name, translations)}
-              fill
-              unoptimized
-              sizes="(max-width: 768px) 100vw, 420px"
-              className="object-cover"
-            />
+            {streetViewUrl ? (
+              <Image
+                src={streetViewUrl}
+                alt={resolveStreetViewAlt(detail.zone.name, translations)}
+                fill
+                unoptimized
+                sizes="(max-width: 768px) 100vw, 420px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-surface-high" aria-hidden />
+            )}
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,12,12,0.08)_0%,rgba(12,12,12,0.18)_35%,rgba(12,12,12,0.82)_100%)]" />
             <div className="absolute inset-x-4 top-4 flex items-start justify-between gap-3">
               <p

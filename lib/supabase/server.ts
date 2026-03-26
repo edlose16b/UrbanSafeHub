@@ -1,5 +1,7 @@
+import "server-only";
+
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { getSupabaseConfig } from "./config";
 
@@ -29,4 +31,28 @@ export async function getSupabaseServerClient(): Promise<SupabaseClient> {
       },
     },
   });
+}
+
+let adminClient: SupabaseClient | undefined;
+
+export function getSupabaseAdminClient(): SupabaseClient {
+  if (adminClient) {
+    return adminClient;
+  }
+
+  const { url } = getSupabaseConfig();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!serviceRoleKey) {
+    throw new Error("Missing env var: SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  adminClient = createClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  return adminClient;
 }

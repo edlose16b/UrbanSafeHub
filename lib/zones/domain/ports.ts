@@ -1,9 +1,6 @@
 import type { ZoneGeometry, ZoneSnapshot } from "./zone";
-import type { TimeSegment, ZoneDetailSnapshot } from "./zone-detail";
-import type {
-  CreateZoneRatingRecord,
-  SubmitZoneRatingRecord,
-} from "./validation";
+import type { ZoneDetailSnapshot } from "./zone-detail";
+import type { CreateZoneRatingRecord } from "./validation";
 
 export type CreateZoneRecord = {
   name: string;
@@ -23,13 +20,6 @@ export type SubmitZoneRatingsRecord = {
   zoneId: string;
   userId: string | null;
   anonymousFingerprint: string | null;
-  anonymousActor:
-    | {
-        fingerprintHash: string;
-        ipHash: string | null;
-        userAgentHash: string | null;
-      }
-    | null;
   ratings: CreateZoneRatingRecord[];
 };
 

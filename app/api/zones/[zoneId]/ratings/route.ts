@@ -9,6 +9,7 @@ import {
   buildAnonymousVoteIdentity,
   getClientIp,
 } from "@/lib/zones/server/anonymous-vote-identity";
+import { recordAnonymousVoteActor } from "@/lib/zones/server/anonymous-vote-actors";
 import { invalidateVisibleZonesCache } from "@/lib/zones/server/zones-cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -61,19 +62,28 @@ export async function POST(
         userAgent: request.headers.get("user-agent"),
       });
       anonymousFingerprint = anonymousActor.fingerprintHash;
+
+      await recordAnonymousVoteActor({
+        fingerprintHash: anonymousActor.fingerprintHash,
+        ipHash: anonymousActor.ipHash,
+        userAgentHash: anonymousActor.userAgentHash,
+        zoneId,
+      });
     }
 
     await submitUseCase.execute({
       zoneId,
       userId: viewer.id,
       anonymousFingerprint,
-      anonymousActor,
       ratings: (payload as { ratings?: unknown }).ratings,
     });
 
     await invalidateVisibleZonesCache();
 
-    const detail = await detailUseCase.execute(zoneId, viewer.id);
+    const detail = await detailUseCase.execute(
+      zoneId,
+      viewer.isAnonymous ? null : viewer.id,
+    );
 
     if (!detail) {
       return NextResponse.json(

@@ -104,6 +104,8 @@ export type MapTranslations = {
   zoneDetailCreatedByLabel: string;
   zoneDetailCreatedAtLabel: string;
   zoneDetailDescriptionLabel: string;
+  zoneDetailStreetViewLabel: string;
+  zoneDetailStreetViewAlt: string;
   zoneDetailCrimeLabel: string;
   zoneDetailNoCrimeData: string;
   zoneDetailRatingsTitle: string;

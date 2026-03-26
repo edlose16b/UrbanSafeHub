@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { type ReactNode } from "react";
 import {
   LampIcon,
@@ -11,7 +12,11 @@ import {
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { SEGMENT_ORDER, type SegmentKey } from "@/lib/zones/rating-time-segments";
 import type { MapTranslations } from "./map-screen";
-import { getZoneSeverity, getZoneTrendSummary } from "./leaflet-map.utils";
+import {
+  getZoneSeverity,
+  getZoneStreetViewUrl,
+  getZoneTrendSummary,
+} from "./leaflet-map.utils";
 import {
   ScoreStars,
   SEGMENT_EMOJIS,
@@ -25,6 +30,9 @@ const RATING_CATEGORY_ORDER = [
   "vigilance",
   "cctv",
 ] as const;
+const GOOGLE_STREET_VIEW_API_KEY =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
+  "AIzaSyCFQEyoMlFjj9PlMAYdMrzxB0x8OilWwvQ";
 
 function formatDateLabel(isoString: string, locale: string): string {
   const parsed = new Date(isoString);
@@ -60,6 +68,10 @@ function resolveCategoryLabel(categorySlug: string, translations: MapTranslation
   }
 
   return categorySlug;
+}
+
+function resolveStreetViewAlt(zoneName: string, translations: MapTranslations): string {
+  return translations.zoneDetailStreetViewAlt.replace("{zoneName}", zoneName);
 }
 
 function CategoryIcon({ categorySlug }: { categorySlug: string }) {
@@ -387,6 +399,7 @@ export function ZoneDetailCard({
     content = <p className="text-sm text-danger-foreground">{error}</p>;
   } else if (detail) {
     const geometry = detail.zone.geometry;
+    const streetViewUrl = getZoneStreetViewUrl(geometry, GOOGLE_STREET_VIEW_API_KEY);
     const geometryTypeLabel =
       geometry.type === "Point"
         ? translations.zoneDetailTypePoint
@@ -467,6 +480,24 @@ export function ZoneDetailCard({
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">{detail.comments.length}</p>
             </div>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-[1rem] bg-surface-muted">
+          <div className="border-b border-outline-variant/20 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
+              {translations.zoneDetailStreetViewLabel}
+            </p>
+          </div>
+          <div className="relative aspect-[16/10] w-full bg-surface-high">
+            <Image
+              src={streetViewUrl}
+              alt={resolveStreetViewAlt(detail.zone.name, translations)}
+              fill
+              unoptimized
+              sizes="(max-width: 768px) 100vw, 380px"
+              className="object-cover"
+            />
           </div>
         </section>
 

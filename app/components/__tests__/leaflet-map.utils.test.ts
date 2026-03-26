@@ -7,6 +7,7 @@ import {
   getCrimeHeatColor,
   getZoneCenter,
   getZoneSeverity,
+  getZoneStreetViewUrl,
   getZoneTrendSummary,
   shouldFetchViewport,
   zoneMatchesFilter,
@@ -137,6 +138,22 @@ describe("leaflet-map.utils", () => {
       expect.closeTo(-12.032, 10),
       expect.closeTo(-77.032, 10),
     ]);
+  });
+
+  it("builds a Google Street View URL from the zone center", () => {
+    const url = getZoneStreetViewUrl(
+      {
+        type: "Point",
+        coordinates: [-77.0428, -12.0464],
+        radiusM: 150,
+      },
+      "test-key",
+    );
+
+    expect(url).toContain("maps.googleapis.com/maps/api/streetview");
+    expect(url).toContain("size=1200x720");
+    expect(url).toContain("location=-12.0464%2C-77.0428");
+    expect(url).toContain("key=test-key");
   });
 
   it("derives discrete heat colors and a day-stronger trend summary", () => {

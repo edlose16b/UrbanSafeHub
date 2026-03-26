@@ -103,6 +103,8 @@
     "zoneDetailCreatedByLabel": "Creado por",
     "zoneDetailCreatedAtLabel": "Creado el",
     "zoneDetailDescriptionLabel": "Contexto",
+    "zoneDetailStreetViewLabel": "Vista de la zona",
+    "zoneDetailStreetViewAlt": "Vista de calle de {zoneName}",
     "zoneDetailCrimeLabel": "Seguridad frente al delito",
     "zoneDetailNoCrimeData": "Sin datos de seguridad frente al delito",
     "zoneDetailRatingsTitle": "Puntuaciones",

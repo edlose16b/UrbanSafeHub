@@ -138,6 +138,20 @@ export function getZoneCenter(geometry: ZoneGeometry): [number, number] {
   return [sum.latitude / ring.length, sum.longitude / ring.length];
 }
 
+export function getZoneStreetViewUrl(geometry: ZoneGeometry, apiKey: string): string {
+  const [latitude, longitude] = getZoneCenter(geometry);
+  const params = new URLSearchParams({
+    size: "1200x720",
+    location: `${latitude},${longitude}`,
+    heading: "0",
+    pitch: "0",
+    fov: "90",
+    key: apiKey,
+  });
+
+  return `https://maps.googleapis.com/maps/api/streetview?${params.toString()}`;
+}
+
 function getSegmentSafetyScore(detail: ZoneDetailDTO, segmentKey: string): number | null {
   const scores = detail.aggregates
     .filter((aggregate) => aggregate.timeSegment === segmentKey && aggregate.avgScore !== null)

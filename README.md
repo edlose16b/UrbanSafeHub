@@ -1,7 +1,7 @@
 # UrbanSafeHub
 
 🕵️ UrbanSafeHub es un mapa comunitario donde podrás ver y calificar zonas de las ciudades.
-![Demo https://urbansafehub.edwinbalbin.com/](https://urbansafehub.edwinbalbin.com/)
+[Demo https://urbansafehub.edwinbalbin.com/](https://urbansafehub.edwinbalbin.com/)
 
 ## Problema que resuelve
 

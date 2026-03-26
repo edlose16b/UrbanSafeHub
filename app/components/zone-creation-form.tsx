@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import {
+  EyeIcon,
+  LampIcon,
+  SecurityCameraIcon,
+  ShieldWarningIcon,
+  UsersThreeIcon,
+} from "@phosphor-icons/react";
 import { POINT_RADIUS_OPTIONS_M } from "@/app/constants/map";
 import type { LeafletMapProps } from "./leaflet-map.types";
 import {
@@ -14,10 +21,7 @@ import type {
   ZoneCreationMetricScores,
   ZoneRatingScore,
 } from "./zone-creation-form.utils";
-import {
-  fillMetricScores,
-  summarizeMetricScores,
-} from "./zone-creation-form.utils";
+import { summarizeMetricScores } from "./zone-creation-form.utils";
 
 type ZoneCreationFormProps = {
   isVisible: boolean;
@@ -38,12 +42,12 @@ type ZoneCreationFormProps = {
   onDescriptionChange: (nextDescription: string) => void;
   onRadiusChange: (value: number) => void;
   onMetricScoreChange: (
-    category: "crime" | "foot_traffic",
+    category: "crime" | "foot_traffic" | "vigilance",
     segment: SegmentKey,
     score: ZoneRatingScore,
   ) => void;
   onInfrastructureScoreChange: (
-    category: keyof ZoneCreationInfrastructureScores,
+    category: "lighting" | "cctv",
     score: ZoneRatingScore,
   ) => void;
   onClearDraft: () => void;
@@ -111,6 +115,29 @@ function resolveMetricStarColor(score: NullableZoneRatingScore): string {
   return "text-tertiary";
 }
 
+function CategoryIcon({
+  category,
+}: {
+  category: "crime" | "foot_traffic" | "lighting" | "vigilance" | "cctv";
+}) {
+  const className = "text-text-secondary";
+  const size = 18;
+  const weight = "duotone" as const;
+
+  switch (category) {
+    case "crime":
+      return <ShieldWarningIcon size={size} weight={weight} aria-hidden className={className} />;
+    case "foot_traffic":
+      return <UsersThreeIcon size={size} weight={weight} aria-hidden className={className} />;
+    case "lighting":
+      return <LampIcon size={size} weight={weight} aria-hidden className={className} />;
+    case "vigilance":
+      return <EyeIcon size={size} weight={weight} aria-hidden className={className} />;
+    case "cctv":
+      return <SecurityCameraIcon size={size} weight={weight} aria-hidden className={className} />;
+  }
+}
+
 function ScoreStars({
   value,
   metricLabel,
@@ -150,6 +177,7 @@ function ScoreStars({
 
 function MetricSummaryCard({
   title,
+  icon,
   summary,
   onScoreChange,
   isExpanded,
@@ -157,6 +185,7 @@ function MetricSummaryCard({
   translations,
 }: {
   title: string;
+  icon: ReactNode;
   summary: MetricScoresSummary;
   onScoreChange: (score: ZoneRatingScore) => void;
   isExpanded: boolean;
@@ -173,17 +202,11 @@ function MetricSummaryCard({
     <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-high p-4 transition-colors hover:bg-surface-highest">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div
-            aria-hidden
-            className="grid shrink-0 grid-cols-2 gap-x-0.5 gap-y-0.5 rounded-[0.85rem] bg-surface-lowest px-2 py-1.5 text-sm leading-none text-text-secondary"
-          >
-            <span>{SEGMENT_EMOJIS.morning}</span>
-            <span>{SEGMENT_EMOJIS.afternoon}</span>
-            <span>{SEGMENT_EMOJIS.night}</span>
-            <span>{SEGMENT_EMOJIS.early_morning}</span>
-          </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+              {icon}
+              <span>{title}</span>
+            </h3>
             <p className="mt-1 text-xs text-text-secondary">{helperText}</p>
           </div>
         </div>
@@ -244,11 +267,13 @@ function MetricSegmentCard({
 
 function MetricGroup({
   title,
+  icon,
   scores,
   onScoreChange,
   translations,
 }: {
   title: string;
+  icon: ReactNode;
   scores: ZoneCreationMetricScores;
   onScoreChange: (segment: SegmentKey, score: ZoneRatingScore) => void;
   translations: LeafletMapProps["translations"];
@@ -263,9 +288,8 @@ function MetricGroup({
   }, [summary.hasAnyScore]);
 
   function handleApplyToAll(score: ZoneRatingScore): void {
-    const filledScores = fillMetricScores(score);
     for (const segment of SEGMENT_ORDER) {
-      onScoreChange(segment, filledScores[segment]);
+      onScoreChange(segment, score);
     }
   }
 
@@ -273,6 +297,7 @@ function MetricGroup({
     <section className="space-y-4">
       <MetricSummaryCard
         title={title}
+        icon={icon}
         summary={summary}
         onScoreChange={handleApplyToAll}
         isExpanded={isExpanded}
@@ -474,6 +499,7 @@ export function ZoneCreationForm({
         <div className="mt-5 space-y-6">
           <MetricGroup
             title={translations.zoneCreateMetricCrime}
+            icon={<CategoryIcon category="crime" />}
             scores={crimeScores}
             onScoreChange={(segment, score) =>
               onMetricScoreChange("crime", segment, score)
@@ -483,6 +509,7 @@ export function ZoneCreationForm({
 
           <MetricGroup
             title={translations.zoneCreateMetricFootTraffic}
+            icon={<CategoryIcon category="foot_traffic" />}
             scores={footTrafficScores}
             onScoreChange={(segment, score) =>
               onMetricScoreChange("foot_traffic", segment, score)
@@ -503,7 +530,10 @@ export function ZoneCreationForm({
           <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="text-sm font-medium text-foreground">
-                {translations.zoneCreateInfrastructureLighting}
+                <span className="inline-flex items-center gap-2">
+                  <CategoryIcon category="lighting" />
+                  <span>{translations.zoneCreateInfrastructureLighting}</span>
+                </span>
               </span>
               <select
                 value={infrastructureScores.lighting ?? ""}
@@ -530,7 +560,10 @@ export function ZoneCreationForm({
           <div className="rounded-[1rem] border border-outline-variant/20 bg-surface-low px-4 py-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="text-sm font-medium text-foreground">
-                {translations.zoneCreateInfrastructureCctv}
+                <span className="inline-flex items-center gap-2">
+                  <CategoryIcon category="cctv" />
+                  <span>{translations.zoneCreateInfrastructureCctv}</span>
+                </span>
               </span>
               <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
                 {translations.zoneCreateMetricScaleLabel}
@@ -548,33 +581,16 @@ export function ZoneCreationForm({
               <span className="text-sm font-medium text-foreground">
                 {translations.zoneCreateInfrastructureVigilance}
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-                {translations.zoneCreateMetricScaleLabel}
-              </span>
             </div>
-            <div className="grid gap-2">
-              {SCORE_OPTIONS.map((score) => {
-                const isActive = infrastructureScores.vigilance === score;
-                return (
-                  <button
-                    key={score}
-                    type="button"
-                    onClick={() => onInfrastructureScoreChange("vigilance", score)}
-                    aria-pressed={isActive}
-                    className={`flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all ${
-                      isActive
-                        ? "border border-primary/35 bg-primary/12 text-primary"
-                        : "bg-surface-high text-foreground hover:bg-surface-highest"
-                    }`}
-                  >
-                    <span className="text-sm font-medium">
-                      {resolveScaleLabel(score, translations)}
-                    </span>
-                    <span className="text-xs font-semibold">{score}/5</span>
-                  </button>
-                );
-              })}
-            </div>
+            <MetricGroup
+              title={translations.zoneCreateInfrastructureVigilance}
+              icon={<CategoryIcon category="vigilance" />}
+              scores={infrastructureScores.vigilance}
+              onScoreChange={(segment, score) =>
+                onMetricScoreChange("vigilance", segment, score)
+              }
+              translations={translations}
+            />
           </div>
         </div>
       </section>

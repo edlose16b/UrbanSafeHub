@@ -277,7 +277,7 @@ export function useZoneCreation({
 
   const onMetricScoreChange = useCallback(
     (
-      category: "crime" | "foot_traffic",
+      category: "crime" | "foot_traffic" | "vigilance",
       segment: SegmentKey,
       score: ZoneRatingScore,
     ) => {
@@ -292,19 +292,27 @@ export function useZoneCreation({
         return;
       }
 
-      setFootTrafficScores((current) => ({
+      if (category === "foot_traffic") {
+        setFootTrafficScores((current) => ({
+          ...current,
+          [segment]: score,
+        }));
+        return;
+      }
+
+      setInfrastructureScores((current) => ({
         ...current,
-        [segment]: score,
+        vigilance: {
+          ...current.vigilance,
+          [segment]: score,
+        },
       }));
     },
     [],
   );
 
   const onInfrastructureScoreChange = useCallback(
-    (
-      category: keyof ZoneCreationInfrastructureScores,
-      score: ZoneRatingScore,
-    ) => {
+    (category: "lighting" | "cctv", score: ZoneRatingScore) => {
       setSubmitError(null);
       setSubmitSuccess(null);
       setInfrastructureScores((current) => ({

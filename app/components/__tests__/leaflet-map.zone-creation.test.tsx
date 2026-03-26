@@ -16,10 +16,10 @@ function fillRequiredRatings(
     for (const segment of SEGMENT_ORDER) {
       result.current.onMetricScoreChange("crime", segment, 4);
       result.current.onMetricScoreChange("foot_traffic", segment, 3);
+      result.current.onMetricScoreChange("vigilance", segment, 2);
     }
     result.current.onInfrastructureScoreChange("lighting", 5);
     result.current.onInfrastructureScoreChange("cctv", 4);
-    result.current.onInfrastructureScoreChange("vigilance", 2);
   });
 }
 

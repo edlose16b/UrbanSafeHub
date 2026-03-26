@@ -8,7 +8,7 @@ export type ZoneCreationMetricScores = Record<SegmentKey, NullableZoneRatingScor
 export type ZoneCreationInfrastructureScores = {
   lighting: NullableZoneRatingScore;
   cctv: NullableZoneRatingScore;
-  vigilance: NullableZoneRatingScore;
+  vigilance: ZoneCreationMetricScores;
 };
 
 export type ZoneCreationRatingPayload = {
@@ -36,7 +36,7 @@ export function createEmptyInfrastructureScores(): ZoneCreationInfrastructureSco
   return {
     lighting: null,
     cctv: null,
-    vigilance: null,
+    vigilance: createEmptyMetricScores(),
   };
 }
 
@@ -103,7 +103,7 @@ export function hasCompleteInfrastructureScores(
   return (
     isZoneRatingScore(scores.lighting) &&
     isZoneRatingScore(scores.cctv) &&
-    isZoneRatingScore(scores.vigilance)
+    hasCompleteMetricScores(scores.vigilance)
   );
 }
 
@@ -155,12 +155,12 @@ export function buildZoneCreationRatingsPayload(input: {
         ]
       : []),
     ...SEGMENT_ORDER.flatMap((timeSegment) =>
-      isZoneRatingScore(infrastructureScores.vigilance)
+      isZoneRatingScore(infrastructureScores.vigilance[timeSegment])
         ? [
             {
               categorySlug: "vigilance" as const,
               timeSegment,
-              score: infrastructureScores.vigilance,
+              score: infrastructureScores.vigilance[timeSegment],
             },
           ]
         : [],

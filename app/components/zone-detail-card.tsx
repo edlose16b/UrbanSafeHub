@@ -1,6 +1,13 @@
 "use client";
 
 import { type ReactNode } from "react";
+import {
+  EyeIcon,
+  LampIcon,
+  SecurityCameraIcon,
+  ShieldWarningIcon,
+  UsersThreeIcon,
+} from "@phosphor-icons/react";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { SEGMENT_ORDER, type SegmentKey } from "@/lib/zones/rating-time-segments";
 import type { MapTranslations } from "./map-screen";
@@ -58,6 +65,41 @@ function resolveCategoryLabel(categorySlug: string, translations: MapTranslation
   return categorySlug;
 }
 
+function CategoryIcon({ categorySlug }: { categorySlug: string }) {
+  const className = "text-text-secondary";
+  const size = 18;
+  const weight = "duotone" as const;
+
+  if (categorySlug === "crime") {
+    return <ShieldWarningIcon size={size} weight={weight} aria-hidden className={className} />;
+  }
+
+  if (categorySlug === "lighting") {
+    return <LampIcon size={size} weight={weight} aria-hidden className={className} />;
+  }
+
+  if (categorySlug === "foot_traffic") {
+    return <UsersThreeIcon size={size} weight={weight} aria-hidden className={className} />;
+  }
+
+  if (categorySlug === "vigilance") {
+    return <EyeIcon size={size} weight={weight} aria-hidden className={className} />;
+  }
+
+  if (categorySlug === "cctv") {
+    return (
+      <SecurityCameraIcon
+        size={size}
+        weight={weight}
+        aria-hidden
+        className={className}
+      />
+    );
+  }
+
+  return null;
+}
+
 function CategoryScoreBlock({
   categorySlug,
   valueByCell,
@@ -82,8 +124,9 @@ function CategoryScoreBlock({
 
   return (
     <div className="rounded-[1rem] bg-surface-muted px-3.5 py-3">
-      <p className="text-sm font-medium text-foreground">
-        {resolveCategoryLabel(categorySlug, translations)}
+      <p className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+        <CategoryIcon categorySlug={categorySlug} />
+        <span>{resolveCategoryLabel(categorySlug, translations)}</span>
       </p>
       <ul className="mt-2.5 space-y-1.5">
         {segmentRows.map(({ segmentKey, label }) => {

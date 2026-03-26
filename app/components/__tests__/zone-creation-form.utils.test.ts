@@ -64,7 +64,12 @@ describe("buildZoneCreationRatingsPayload", () => {
       infrastructureScores: {
         lighting: 5,
         cctv: 4,
-        vigilance: 2,
+        vigilance: {
+          morning: 2,
+          afternoon: 3,
+          night: 4,
+          early_morning: 5,
+        },
       },
     });
 
@@ -73,9 +78,9 @@ describe("buildZoneCreationRatingsPayload", () => {
       payload.filter((rating) => rating.categorySlug === "vigilance"),
     ).toEqual([
       { categorySlug: "vigilance", timeSegment: "morning", score: 2 },
-      { categorySlug: "vigilance", timeSegment: "afternoon", score: 2 },
-      { categorySlug: "vigilance", timeSegment: "night", score: 2 },
-      { categorySlug: "vigilance", timeSegment: "early_morning", score: 2 },
+      { categorySlug: "vigilance", timeSegment: "afternoon", score: 3 },
+      { categorySlug: "vigilance", timeSegment: "night", score: 4 },
+      { categorySlug: "vigilance", timeSegment: "early_morning", score: 5 },
     ]);
   });
 
@@ -96,7 +101,12 @@ describe("buildZoneCreationRatingsPayload", () => {
       infrastructureScores: {
         lighting: null,
         cctv: 4,
-        vigilance: null,
+        vigilance: {
+          morning: null,
+          afternoon: null,
+          night: null,
+          early_morning: null,
+        },
       },
     });
 

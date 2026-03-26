@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { type ReactNode, useCallback, useDeferredValue, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { CITY_OPTIONS, type CityOption } from "@/app/constants/cities";
 import { MapContainer, TileLayer } from "react-leaflet";
-import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import {
   INITIAL_ZOOM,
   LIMA_CENTER,
@@ -13,6 +13,7 @@ import {
   TILE_ATTRIBUTION,
 } from "../constants/map";
 import AuthAvatarMenu from "./auth-avatar-menu";
+import { CitySwitcher } from "./city-switcher";
 import {
   FocusMapTarget,
   RecenterOnUserPosition,
@@ -33,9 +34,7 @@ import type { LeafletMapProps } from "./leaflet-map.types";
 import { ZoneDetailCard } from "./zone-detail-card";
 import {
   getZoneCenter,
-  getZoneSeverity,
   zoneMatchesFilter,
-  zoneMatchesSearch,
   type ZoneFilterKey,
 } from "./leaflet-map.utils";
 import { ZoneCreationForm } from "./zone-creation-form";
@@ -132,58 +131,6 @@ function FilterBar({
   );
 }
 
-function SearchResults({
-  query,
-  results,
-  onSelect,
-  translations,
-}: {
-  query: string;
-  results: ZoneDTO[];
-  onSelect: (zone: ZoneDTO) => void;
-  translations: LeafletMapProps["translations"];
-}) {
-  if (!query.trim()) {
-    return null;
-  }
-
-  return (
-    <div className="glass-panel ghost-outline absolute top-full left-0 right-0 mt-2 overflow-hidden rounded-[1rem] text-sm text-foreground">
-      <div className="border-b border-outline-variant/20 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-        {translations.searchZonesResultsTitle}
-      </div>
-      {results.length === 0 ? (
-        <p className="px-4 py-4 text-sm text-text-secondary">
-          {translations.searchZonesEmpty}
-        </p>
-      ) : (
-        <ul className="max-h-72 overflow-y-auto">
-          {results.map((zone) => (
-            <li key={zone.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(zone)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface-high"
-              >
-                <span className="truncate">{zone.name}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-                  {getZoneSeverity(zone.crimeLevel) === "safe"
-                    ? translations.filterSafe
-                    : getZoneSeverity(zone.crimeLevel) === "moderate"
-                      ? translations.filterModerate
-                      : getZoneSeverity(zone.crimeLevel) === "danger"
-                        ? translations.filterDanger
-                        : translations.zoneDetailStatusUnknown}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 function MobileBottomBar({
   isLegendVisible,
   onMapTap,
@@ -262,12 +209,14 @@ export default function LeafletMap({
   const { isDarkMode, toggleTheme } = useMapTheme();
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [activeFilter, setActiveFilter] = useState<ZoneFilterKey>("all");
   const [isFilterBarVisible, setIsFilterBarVisible] = useState(false);
   const [isLegendVisible, setIsLegendVisible] = useState(true);
-  const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
+  const [activeCity, setActiveCity] = useState<CityOption>(CITY_OPTIONS[0]);
+  const [focusTarget, setFocusTarget] = useState<{
+    position: [number, number];
+    zoom?: number;
+  } | null>(null);
   const { zones, prependZone, scheduleZoneFetch, cancelScheduledZoneFetch } =
     useZonesByViewport();
   const {
@@ -347,20 +296,8 @@ export default function LeafletMap({
         ? translations.locationUnavailableMessage
         : null;
   const filteredZones = useMemo(
-    () =>
-      zones.filter(
-        (zone) =>
-          zoneMatchesFilter(zone, activeFilter) &&
-          zoneMatchesSearch(zone, deferredSearchQuery),
-      ),
-    [activeFilter, deferredSearchQuery, zones],
-  );
-  const searchResults = useMemo(
-    () =>
-      zones
-        .filter((zone) => zoneMatchesSearch(zone, deferredSearchQuery))
-        .slice(0, 6),
-    [deferredSearchQuery, zones],
+    () => zones.filter((zone) => zoneMatchesFilter(zone, activeFilter)),
+    [activeFilter, zones],
   );
   const selectedZoneId = selectedZoneDetail?.zone.id ?? null;
 
@@ -368,11 +305,26 @@ export default function LeafletMap({
     (zoneId: string) => {
       const zone = zones.find((candidate) => candidate.id === zoneId);
       if (zone) {
-        setFocusTarget(getZoneCenter(zone.geometry));
+        setFocusTarget({
+          position: getZoneCenter(zone.geometry),
+        });
       }
       selectZone(zoneId);
     },
     [selectZone, zones],
+  );
+
+  const handleCitySelect = useCallback(
+    (city: CityOption) => {
+      setActiveCity(city);
+      clearSelectedZone();
+      setIsFilterBarVisible(false);
+      setFocusTarget({
+        position: city.center,
+        zoom: city.zoom,
+      });
+    },
+    [clearSelectedZone],
   );
 
   const zoneSelectHandler = useMemo(() => {
@@ -382,16 +334,6 @@ export default function LeafletMap({
 
     return handleZoneSelect;
   }, [effectiveCanCreateZone, handleZoneSelect]);
-
-  const handleSearchSelect = useCallback(
-    (zone: ZoneDTO) => {
-      setSearchQuery(zone.name);
-      setFocusTarget(getZoneCenter(zone.geometry));
-      setIsFilterBarVisible(false);
-      selectZone(zone.id);
-    },
-    [selectZone],
-  );
 
   const desktopAuthMenu = (
     <AuthAvatarMenu
@@ -422,23 +364,11 @@ export default function LeafletMap({
             </h1>
           </div>
 
-          <div className="relative hidden max-w-xl flex-1 md:block">
-            <label className="ghost-outline flex items-center gap-3 rounded-[0.9rem] bg-surface-highest px-4 py-3">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-                {translations.searchZonesLabel}
-              </span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={translations.searchZonesPlaceholder}
-                className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-text-secondary"
-              />
-            </label>
-            <SearchResults
-              query={deferredSearchQuery}
-              results={searchResults}
-              onSelect={handleSearchSelect}
+          <div className="relative hidden max-w-md flex-1 md:block">
+            <CitySwitcher
+              activeCity={activeCity}
+              cities={CITY_OPTIONS}
+              onSelect={handleCitySelect}
               translations={translations}
             />
           </div>
@@ -473,22 +403,10 @@ export default function LeafletMap({
 
         <div className="px-4 pb-2 md:hidden">
           <div className="relative">
-            <label className="glass-panel ghost-outline flex items-center gap-3 rounded-[1rem] px-4 py-3">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-                {translations.searchZonesLabel}
-              </span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={translations.searchZonesPlaceholder}
-                className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-text-secondary"
-              />
-            </label>
-            <SearchResults
-              query={deferredSearchQuery}
-              results={searchResults}
-              onSelect={handleSearchSelect}
+            <CitySwitcher
+              activeCity={activeCity}
+              cities={CITY_OPTIONS}
+              onSelect={handleCitySelect}
               translations={translations}
             />
           </div>
@@ -573,7 +491,6 @@ export default function LeafletMap({
       <MobileBottomBar
         isLegendVisible={isLegendVisible}
         onMapTap={() => {
-          setSearchQuery("");
           clearSelectedZone();
         }}
         onToggleFilters={() => setIsFilterBarVisible((current) => !current)}
@@ -601,7 +518,7 @@ export default function LeafletMap({
           canCreate={effectiveCanCreateZone}
           onMapClick={handleMapClick}
         />
-        <FocusMapTarget position={focusTarget} />
+        <FocusMapTarget target={focusTarget} />
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
         <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
         <ZoneLayer

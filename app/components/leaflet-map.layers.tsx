@@ -26,6 +26,10 @@ const USER_LOCATION_OUTER = "#4ae183";
 const USER_LOCATION_CORE = "#ffcb8d";
 
 type Position = [number, number];
+type FocusTarget = {
+  position: Position;
+  zoom?: number;
+};
 
 type ViewportZoneFetcherProps = {
   onViewportInteractionStarted: () => void;
@@ -70,19 +74,19 @@ export function RecenterOnUserPosition({ position }: { position: Position }) {
   return null;
 }
 
-export function FocusMapTarget({ position }: { position: Position | null }) {
+export function FocusMapTarget({ target }: { target: FocusTarget | null }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!position) {
+    if (!target) {
       return;
     }
 
-    map.flyTo(position, Math.max(map.getZoom(), 15), {
+    map.flyTo(target.position, target.zoom ?? Math.max(map.getZoom(), 15), {
       animate: true,
       duration: 0.8,
     });
-  }, [map, position]);
+  }, [map, target]);
 
   return null;
 }

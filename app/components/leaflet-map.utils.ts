@@ -107,15 +107,6 @@ export function zoneMatchesFilter(zone: ZoneDTO, filterKey: ZoneFilterKey): bool
   return getZoneSeverity(zone.crimeLevel) === filterKey;
 }
 
-export function zoneMatchesSearch(zone: ZoneDTO, rawQuery: string): boolean {
-  const normalizedQuery = rawQuery.trim().toLowerCase();
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  return zone.name.toLowerCase().includes(normalizedQuery);
-}
-
 export function getZoneCenter(geometry: ZoneGeometry): [number, number] {
   if (geometry.type === "Point") {
     const [longitude, latitude] = geometry.coordinates;

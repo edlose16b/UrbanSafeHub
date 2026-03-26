@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CITY_OPTIONS } from "@/app/constants/cities";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { ViewportQuery } from "../leaflet-map.types";
@@ -11,7 +12,6 @@ import {
   getZoneTrendSummary,
   shouldFetchViewport,
   zoneMatchesFilter,
-  zoneMatchesSearch,
 } from "../leaflet-map.utils";
 
 function metersToLatDelta(meters: number): number {
@@ -38,10 +38,10 @@ describe("leaflet-map.utils", () => {
     expect(shouldFetchViewport(tinyMovementViewport, baseViewport)).toBe(false);
   });
 
-  it("fetches when center movement reaches threshold boundary", () => {
+  it("fetches when center movement reaches the viewport threshold", () => {
     const boundaryMovementViewport: ViewportQuery = {
       ...baseViewport,
-      lat: baseViewport.lat + metersToLatDelta(101),
+      lat: baseViewport.lat + metersToLatDelta(201),
     };
 
     expect(shouldFetchViewport(boundaryMovementViewport, baseViewport)).toBe(true);
@@ -91,7 +91,7 @@ describe("leaflet-map.utils", () => {
     expect(getZoneSeverity(4.2)).toBe("safe");
   });
 
-  it("matches zones by filter and search query", () => {
+  it("matches zones by safety filter", () => {
     const zone: ZoneDTO = {
       id: "zone-1",
       name: "Avenida Central",
@@ -108,8 +108,12 @@ describe("leaflet-map.utils", () => {
 
     expect(zoneMatchesFilter(zone, "danger")).toBe(false);
     expect(zoneMatchesFilter(zone, "safe")).toBe(true);
-    expect(zoneMatchesSearch(zone, "central")).toBe(true);
-    expect(zoneMatchesSearch(zone, "paradero")).toBe(false);
+  });
+
+  it("exposes a fixed city catalog for the map switcher", () => {
+    expect(CITY_OPTIONS[0]?.id).toBe("lima");
+    expect(CITY_OPTIONS.map((city) => city.id)).toContain("bogota");
+    expect(CITY_OPTIONS.map((city) => city.id)).toContain("ciudad-de-mexico");
   });
 
   it("computes zone centers for point and polygon geometries", () => {

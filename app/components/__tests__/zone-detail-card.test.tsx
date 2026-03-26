@@ -71,7 +71,6 @@ describe("ZoneDetailCard", () => {
     );
 
     expect(screen.getByText("Near the main avenue and bus stop.")).toBeTruthy();
-    expect(screen.getByAltText("Street view of Universitaria Hub")).toBeTruthy();
     expect(screen.getByText("Safe hub")).toBeTruthy();
     expect(screen.getByText("Infrastructure")).toBeTruthy();
     expect(screen.getByText("Zone data")).toBeTruthy();

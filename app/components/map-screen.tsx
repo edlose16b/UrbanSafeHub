@@ -114,7 +114,6 @@ export type MapTranslations = {
   zoneDetailNoData: string;
   zoneDetailCategoryLabel: string;
   zoneDetailCategoryCrime: string;
-  zoneDetailCategoryOverallSafety: string;
   zoneDetailCategoryLighting: string;
   zoneDetailCategoryFootTraffic: string;
   zoneDetailCategoryVigilance: string;
@@ -151,7 +150,6 @@ export type MapTranslations = {
   zoneDetailVoteAnonymousBadge: string;
   zoneDetailVoteExpand: string;
   zoneDetailVoteCollapse: string;
-  zoneDetailVoteOverallLabel: string;
   zoneDetailVoteCrimeLabel: string;
   zoneDetailVoteLightingLabel: string;
   zoneDetailVoteFootTrafficLabel: string;

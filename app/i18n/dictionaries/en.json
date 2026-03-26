@@ -113,7 +113,6 @@
     "zoneDetailNoData": "No data",
     "zoneDetailCategoryLabel": "Category",
     "zoneDetailCategoryCrime": "Crime safety",
-    "zoneDetailCategoryOverallSafety": "Overall safety perception",
     "zoneDetailCategoryLighting": "Lighting",
     "zoneDetailCategoryFootTraffic": "Foot traffic",
     "zoneDetailCategoryVigilance": "Vigilance",
@@ -150,7 +149,6 @@
     "zoneDetailVoteAnonymousBadge": "Anonymous",
     "zoneDetailVoteExpand": "Add more detail",
     "zoneDetailVoteCollapse": "Hide detail",
-    "zoneDetailVoteOverallLabel": "Overall safety perception",
     "zoneDetailVoteCrimeLabel": "Crime safety",
     "zoneDetailVoteLightingLabel": "Lighting",
     "zoneDetailVoteFootTrafficLabel": "Foot traffic",
@@ -165,7 +163,7 @@
     "zoneDetailVoteOption4": "4 · Safe",
     "zoneDetailVoteOption5": "5 · Very safe",
     "zoneDetailVoteDetailTitle": "Optional detail",
-    "zoneDetailVoteRequired": "You must rate the overall safety perception."
+    "zoneDetailVoteRequired": "You must submit at least one rating."
   },
   "auth": {
     "anonymousLabel": "A",

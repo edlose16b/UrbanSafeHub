@@ -113,7 +113,6 @@
     "zoneDetailNoData": "Sin datos",
     "zoneDetailCategoryLabel": "Categoría",
     "zoneDetailCategoryCrime": "Seguridad frente al delito",
-    "zoneDetailCategoryOverallSafety": "Percepción general de seguridad",
     "zoneDetailCategoryLighting": "Iluminación",
     "zoneDetailCategoryFootTraffic": "Afluencia de personas",
     "zoneDetailCategoryVigilance": "Vigilancia",
@@ -150,7 +149,6 @@
     "zoneDetailVoteAnonymousBadge": "Anónimo",
     "zoneDetailVoteExpand": "Agregar más detalle",
     "zoneDetailVoteCollapse": "Ocultar detalle",
-    "zoneDetailVoteOverallLabel": "Percepción general de seguridad",
     "zoneDetailVoteCrimeLabel": "Seguridad frente al delito",
     "zoneDetailVoteLightingLabel": "Iluminación",
     "zoneDetailVoteFootTrafficLabel": "Afluencia de personas",
@@ -165,7 +163,7 @@
     "zoneDetailVoteOption4": "4 · Segura",
     "zoneDetailVoteOption5": "5 · Muy segura",
     "zoneDetailVoteDetailTitle": "Detalle opcional",
-    "zoneDetailVoteRequired": "Debes registrar la percepción general de seguridad."
+    "zoneDetailVoteRequired": "Debes registrar al menos una calificación."
   },
   "auth": {
     "anonymousLabel": "A",

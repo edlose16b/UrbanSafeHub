@@ -38,7 +38,6 @@ import {
 } from "./zone-creation-form.utils";
 
 const RATING_CATEGORY_ORDER = [
-  "overall_safety",
   "crime",
   "lighting",
   "foot_traffic",
@@ -61,10 +60,6 @@ function formatDateLabel(isoString: string, locale: string): string {
 }
 
 function resolveCategoryLabel(categorySlug: string, translations: MapTranslations): string {
-  if (categorySlug === "overall_safety") {
-    return translations.zoneDetailCategoryOverallSafety;
-  }
-
   if (categorySlug === "crime") {
     return translations.zoneDetailCategoryCrime;
   }
@@ -101,10 +96,6 @@ function CategoryIcon({
 }) {
   const size = 18;
   const weight = "duotone" as const;
-
-  if (categorySlug === "overall_safety") {
-    return <ShieldWarningIcon size={size} weight={weight} aria-hidden className={className} />;
-  }
 
   if (categorySlug === "crime") {
     return <ShieldWarningIcon size={size} weight={weight} aria-hidden className={className} />;
@@ -1039,7 +1030,6 @@ export function ZoneDetailCard({
     const metricBlocks = categoryOrder
       .filter(
         (slug) =>
-          slug === "overall_safety" ||
           slug === "crime" ||
           slug === "foot_traffic" ||
           slug === "vigilance",
@@ -1105,7 +1095,7 @@ export function ZoneDetailCard({
               </div>
 
               <p className="mt-4 text-sm leading-relaxed text-[#d8cac6]">
-                {statusSummary}
+                🤖 {statusSummary}
               </p>
             </div>
           </div>

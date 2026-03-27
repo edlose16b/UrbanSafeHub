@@ -339,4 +339,43 @@ describe("useSelectedZoneDetail", () => {
     expect(result.current.zoneDetailError).toBe("No se pudo cargar.");
     expect(result.current.selectedZoneDetail).toBeNull();
   });
+
+  it("hydrates initial zone detail without fetching again on mount", async () => {
+    const detail: ZoneDetailDTO = {
+      zone: {
+        id: "zone-1",
+        name: "Zona 1",
+        description: "Cerca a la avenida principal",
+        geometry: {
+          type: "Point",
+          coordinates: [-77.0428, -12.0464],
+          radiusM: 150,
+        },
+        crimeLevel: 3.5,
+        createdBy: "user-1",
+        createdAt: "2026-03-20T10:00:00.000Z",
+      },
+      aggregates: [],
+      comments: [],
+      viewerRatings: [],
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useSelectedZoneDetail({
+        detailFetchFailedFallback: "fallback",
+        initialSelectedZoneDetail: detail,
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.selectedZoneId).toBe("zone-1");
+    expect(result.current.selectedZoneDetail?.zone.id).toBe("zone-1");
+    expect(result.current.isZoneDetailLoading).toBe(false);
+  });
 });

@@ -515,14 +515,19 @@ export function useZoneCreation({
 
 type ZoneDetailHookOptions = {
   detailFetchFailedFallback: string;
+  initialSelectedZoneDetail?: ZoneDetailDTO | null;
 };
 
 export function useSelectedZoneDetail({
   detailFetchFailedFallback,
+  initialSelectedZoneDetail = null,
 }: ZoneDetailHookOptions) {
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const initialSelectedZoneId = initialSelectedZoneDetail?.zone.id ?? null;
+  const hydratedZoneIdRef = useRef<string | null>(initialSelectedZoneId);
+  const lastRouteZoneIdRef = useRef<string | null>(initialSelectedZoneId);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(initialSelectedZoneId);
   const [selectedZoneDetail, setSelectedZoneDetail] = useState<ZoneDetailDTO | null>(
-    null,
+    initialSelectedZoneDetail,
   );
   const [isZoneDetailLoading, setIsZoneDetailLoading] = useState(false);
   const [zoneDetailError, setZoneDetailError] = useState<string | null>(null);
@@ -554,8 +559,29 @@ export function useSelectedZoneDetail({
   );
 
   useEffect(() => {
+    if (lastRouteZoneIdRef.current === initialSelectedZoneId) {
+      return;
+    }
+
+    lastRouteZoneIdRef.current = initialSelectedZoneId;
+    hydratedZoneIdRef.current = initialSelectedZoneId;
+    setSelectedZoneId(initialSelectedZoneId);
+    setSelectedZoneDetail(initialSelectedZoneDetail);
+    setIsZoneDetailLoading(false);
+    setZoneDetailError(null);
+  }, [initialSelectedZoneDetail, initialSelectedZoneId]);
+
+  useEffect(() => {
     if (!selectedZoneId) {
+      hydratedZoneIdRef.current = null;
       setSelectedZoneDetail(null);
+      setIsZoneDetailLoading(false);
+      setZoneDetailError(null);
+      return;
+    }
+
+    if (hydratedZoneIdRef.current === selectedZoneId) {
+      hydratedZoneIdRef.current = null;
       setIsZoneDetailLoading(false);
       setZoneDetailError(null);
       return;
@@ -588,7 +614,11 @@ export function useSelectedZoneDetail({
     return () => {
       controller.abort();
     };
-  }, [detailFetchFailedFallback, fetchZoneDetail, selectedZoneId]);
+  }, [
+    detailFetchFailedFallback,
+    fetchZoneDetail,
+    selectedZoneId,
+  ]);
 
   const selectZone = useCallback((zoneId: string) => {
     setSelectedZoneId(zoneId);

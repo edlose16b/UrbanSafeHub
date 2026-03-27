@@ -64,12 +64,18 @@ export function ViewportZoneFetcher({
   return null;
 }
 
-export function RecenterOnUserPosition({ position }: { position: Position }) {
+export function RecenterOnUserPosition({
+  position,
+  requestKey,
+}: {
+  position: Position;
+  requestKey: number;
+}) {
   const map = useMap();
 
   useEffect(() => {
     map.setView(position, USER_LOCATION_ZOOM, { animate: true });
-  }, [map, position]);
+  }, [map, position, requestKey]);
 
   return null;
 }

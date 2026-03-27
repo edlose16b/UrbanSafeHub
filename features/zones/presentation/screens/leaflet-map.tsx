@@ -2,9 +2,13 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CITY_OPTIONS, type CityOption } from "@/app/constants/cities";
 import AuthAvatarMenu from "@/features/auth/presentation/components/auth-avatar-menu";
+import {
+  buildZonePath,
+  resolveZonePathSelection,
+} from "@/lib/zones/application/zone-slug";
 import { MapContainer, Pane, TileLayer } from "react-leaflet";
 import {
   INITIAL_ZOOM,
@@ -136,6 +140,7 @@ function FilterBar({
 export default function LeafletMap({
   lang,
   initialUser,
+  initialSelectedZoneDetail = null,
   authTranslations,
   translations,
 }: LeafletMapProps) {
@@ -146,10 +151,19 @@ export default function LeafletMap({
   const [activeFilter, setActiveFilter] = useState<ZoneFilterKey>("all");
   const [isFilterBarVisible, setIsFilterBarVisible] = useState(false);
   const [activeCity, setActiveCity] = useState<CityOption>(CITY_OPTIONS[0]);
+  const [userRecenterRequestKey, setUserRecenterRequestKey] = useState(
+    initialSelectedZoneDetail ? 0 : 1,
+  );
   const [focusTarget, setFocusTarget] = useState<{
     position: [number, number];
     zoom?: number;
-  } | null>(null);
+  } | null>(
+    initialSelectedZoneDetail
+      ? {
+          position: getZoneCenter(initialSelectedZoneDetail.zone.geometry),
+        }
+      : null,
+  );
   const {
     zones,
     prependZone,
@@ -160,6 +174,7 @@ export default function LeafletMap({
   } =
     useZonesByViewport();
   const {
+    selectedZoneId,
     selectedZoneDetail,
     isZoneDetailLoading,
     zoneDetailError,
@@ -168,16 +183,35 @@ export default function LeafletMap({
     refreshSelectedZone,
   } = useSelectedZoneDetail({
     detailFetchFailedFallback: translations.zoneDetailErrorFallback,
+    initialSelectedZoneDetail,
   });
   const { userPosition, locationStatus, requestUserLocation } = useUserLocation();
   const isAuthenticated = !initialUser.isAnonymous;
   const isCreatePanelVisible = isAuthenticated && isCreateMode;
   const effectiveCanCreateZone = isCreatePanelVisible && hasAcceptedTerms;
+  const homePath = `/${lang}`;
+
+  const syncPath = useCallback(
+    (nextPath: string, mode: "push" | "replace" = "push") => {
+      if (typeof window === "undefined" || window.location.pathname === nextPath) {
+        return;
+      }
+
+      if (mode === "replace") {
+        window.history.replaceState(window.history.state, "", nextPath);
+        return;
+      }
+
+      window.history.pushState(window.history.state, "", nextPath);
+    },
+    [],
+  );
 
   function handleSetCreateMode(nextValue: boolean) {
     setIsCreateMode(nextValue);
     if (nextValue) {
       clearSelectedZone();
+      syncPath(homePath, "replace");
     }
     if (!nextValue) {
       setHasAcceptedTerms(false);
@@ -243,15 +277,69 @@ export default function LeafletMap({
     () => zones.filter((zone) => zoneMatchesFilter(zone, activeFilter)),
     [activeFilter, zones],
   );
-  const selectedZoneId = selectedZoneDetail?.zone.id ?? null;
+  const routeFocusTarget = useMemo(
+    () =>
+      initialSelectedZoneDetail
+        ? {
+            position: getZoneCenter(initialSelectedZoneDetail.zone.geometry),
+          }
+        : null,
+    [initialSelectedZoneDetail],
+  );
+  const selectedDetailFocusTarget = useMemo(
+    () =>
+      selectedZoneDetail
+        ? {
+            position: getZoneCenter(selectedZoneDetail.zone.geometry),
+          }
+        : null,
+    [selectedZoneDetail],
+  );
+  const shouldAutoRecenterToUser = !selectedZoneId && userRecenterRequestKey > 0;
+
+  useEffect(() => {
+    if (!initialSelectedZoneDetail) {
+      return;
+    }
+
+    prependZone(initialSelectedZoneDetail.zone);
+  }, [initialSelectedZoneDetail, prependZone]);
+
+  useEffect(() => {
+    function syncSelectionFromLocation() {
+      const routeSelection = resolveZonePathSelection(window.location.pathname, lang);
+
+      if (!routeSelection) {
+        clearSelectedZone();
+        return;
+      }
+
+      const visibleZone = zones.find((zone) => zone.id === routeSelection.zoneId);
+
+      if (visibleZone) {
+        setFocusTarget({
+          position: getZoneCenter(visibleZone.geometry),
+        });
+      }
+
+      selectZone(routeSelection.zoneId);
+    }
+
+    window.addEventListener("popstate", syncSelectionFromLocation);
+
+    return () => {
+      window.removeEventListener("popstate", syncSelectionFromLocation);
+    };
+  }, [clearSelectedZone, lang, selectZone, zones]);
 
   const handleZoneHidden = useCallback(
     (zoneId: string) => {
       removeZoneById(zoneId);
       clearSelectedZone();
+      syncPath(homePath, "replace");
       void refreshZones();
     },
-    [clearSelectedZone, refreshZones, removeZoneById],
+    [clearSelectedZone, homePath, refreshZones, removeZoneById, syncPath],
   );
 
   const handleZoneSelect = useCallback(
@@ -261,23 +349,34 @@ export default function LeafletMap({
         setFocusTarget({
           position: getZoneCenter(zone.geometry),
         });
+        syncPath(buildZonePath(lang, zone));
       }
       selectZone(zoneId);
     },
-    [selectZone, zones],
+    [lang, selectZone, syncPath, zones],
   );
+
+  const handleCloseZoneDetail = useCallback(() => {
+    clearSelectedZone();
+    syncPath(homePath);
+  }, [clearSelectedZone, homePath, syncPath]);
+
+  const handleClearSelectionForNavigation = useCallback(() => {
+    clearSelectedZone();
+    syncPath(homePath, "replace");
+  }, [clearSelectedZone, homePath, syncPath]);
 
   const handleCitySelect = useCallback(
     (city: CityOption) => {
       setActiveCity(city);
-      clearSelectedZone();
+      handleClearSelectionForNavigation();
       setIsFilterBarVisible(false);
       setFocusTarget({
         position: city.center,
         zoom: city.zoom,
       });
     },
-    [clearSelectedZone],
+    [handleClearSelectionForNavigation],
   );
 
   const zoneSelectHandler = useMemo(() => {
@@ -288,12 +387,21 @@ export default function LeafletMap({
     return handleZoneSelect;
   }, [effectiveCanCreateZone, handleZoneSelect]);
 
+  function handleSignedOut() {
+    handleSetCreateMode(false);
+  }
+
+  const handleLocateUser = useCallback(() => {
+    setUserRecenterRequestKey((current) => current + 1);
+    requestUserLocation();
+  }, [requestUserLocation]);
+
   const desktopAuthMenu = (
     <AuthAvatarMenu
       lang={lang}
       initialPoints={initialUser.points ?? null}
       initialUser={initialUser}
-      onSignedOut={() => handleSetCreateMode(false)}
+      onSignedOut={handleSignedOut}
       translations={authTranslations}
     />
   );
@@ -302,7 +410,7 @@ export default function LeafletMap({
       lang={lang}
       initialPoints={initialUser.points ?? null}
       initialUser={initialUser}
-      onSignedOut={() => handleSetCreateMode(false)}
+      onSignedOut={handleSignedOut}
       translations={authTranslations}
     />
   );
@@ -407,7 +515,7 @@ export default function LeafletMap({
       <div className="absolute right-4 bottom-24 z-[1000] md:bottom-10">
         <button
           type="button"
-          onClick={requestUserLocation}
+          onClick={handleLocateUser}
           className="glass-panel ghost-outline grid h-11 w-11 place-items-center rounded-full text-foreground transition-colors hover:bg-surface-bright/70"
           aria-label={translations.locateUserTitle}
           title={translations.locateUserTitle}
@@ -434,7 +542,7 @@ export default function LeafletMap({
         isLoading={isZoneDetailLoading}
         error={zoneDetailError}
         isAuthenticated={isAuthenticated}
-        onClose={clearSelectedZone}
+        onClose={handleCloseZoneDetail}
         onRefreshDetail={refreshSelectedZone}
         onZoneHidden={handleZoneHidden}
         translations={translations}
@@ -455,8 +563,15 @@ export default function LeafletMap({
           canCreate={effectiveCanCreateZone}
           onMapClick={handleMapClick}
         />
-        <FocusMapTarget target={focusTarget} />
-        {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
+        <FocusMapTarget
+          target={focusTarget ?? selectedDetailFocusTarget ?? routeFocusTarget}
+        />
+        {userPosition && shouldAutoRecenterToUser ? (
+          <RecenterOnUserPosition
+            position={userPosition}
+            requestKey={userRecenterRequestKey}
+          />
+        ) : null}
         <Pane
           name="map-base"
           style={{ zIndex: 200 }}

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import type { AuthMenuTranslations } from "@/features/auth/presentation/components/auth-avatar-menu";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
+import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import type { MapTranslations } from "../types/map-translations";
 
 const LeafletMap = dynamic(() => import("./leaflet-map"), {
@@ -12,6 +13,7 @@ const LeafletMap = dynamic(() => import("./leaflet-map"), {
 type MapScreenProps = {
   lang: string;
   initialUser: AuthUserSnapshot;
+  initialSelectedZoneDetail?: ZoneDetailDTO | null;
   authTranslations: AuthMenuTranslations;
   translations: MapTranslations;
 };
@@ -19,6 +21,7 @@ type MapScreenProps = {
 export default function MapScreen({
   lang,
   initialUser,
+  initialSelectedZoneDetail,
   authTranslations,
   translations,
 }: MapScreenProps) {
@@ -26,6 +29,7 @@ export default function MapScreen({
     <LeafletMap
       lang={lang}
       initialUser={initialUser}
+      initialSelectedZoneDetail={initialSelectedZoneDetail}
       authTranslations={authTranslations}
       translations={translations}
     />

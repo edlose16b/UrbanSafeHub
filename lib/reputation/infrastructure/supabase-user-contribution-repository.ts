@@ -13,6 +13,10 @@ type PointEventRow = {
   created_at: string;
 };
 
+type ProfilePointsRow = {
+  points: number | null;
+};
+
 type SupabaseErrorLike = {
   code?: string;
   message: string;
@@ -34,24 +38,36 @@ function isMissingUserPointEventsTable(error: SupabaseErrorLike): boolean {
   );
 }
 
+function isMissingProfilePointsColumn(error: SupabaseErrorLike): boolean {
+  return (
+    error.code === "PGRST204" ||
+    error.message.includes("Could not find the 'points' column of 'profiles'") ||
+    error.message.includes('column profiles.points does not exist')
+  );
+}
+
 export class SupabaseUserContributionRepository
   implements UserContributionRepository
 {
   constructor(private readonly supabase: SupabaseClient) {}
 
   async getSummaryForUser(userId: string): Promise<UserContributionSummarySnapshot> {
-    const [recentEventsResponse, allEventsResponse] = await Promise.all([
+    const [recentEventsResponse, profilePointsResponse, allEventsResponse] = await Promise.all([
       this.supabase
         .from("user_point_events")
         .select("delta, reason, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(12),
+      this.supabase.from("profiles").select("points").eq("id", userId).maybeSingle(),
       this.supabase
         .from("user_point_events")
         .select("delta")
         .eq("user_id", userId),
     ]);
+    const profilePointsColumnMissing =
+      !!profilePointsResponse.error &&
+      isMissingProfilePointsColumn(profilePointsResponse.error);
 
     if (
       recentEventsResponse.error &&
@@ -70,7 +86,16 @@ export class SupabaseUserContributionRepository
       );
     }
 
-    if (allEventsResponse.error) {
+    if (
+      profilePointsResponse.error &&
+      !profilePointsColumnMissing
+    ) {
+      throw new Error(
+        `Unable to load contribution balance: ${profilePointsResponse.error.message}`,
+      );
+    }
+
+    if (allEventsResponse.error && !profilePointsColumnMissing) {
       throw new Error(
         `Unable to load contribution total: ${allEventsResponse.error.message}`,
       );
@@ -79,8 +104,14 @@ export class SupabaseUserContributionRepository
     const recentEvents = ((recentEventsResponse.data ?? []) as PointEventRow[]).map(
       toEventSnapshot,
     );
-    const totalPoints = ((allEventsResponse.data ?? []) as Array<{ delta: number }>)
-      .reduce((sum, event) => sum + event.delta, 0);
+    const profilePoints = (profilePointsResponse.data as ProfilePointsRow | null)?.points;
+    const totalPoints =
+      typeof profilePoints === "number"
+        ? profilePoints
+        : ((allEventsResponse.data ?? []) as Array<{ delta: number }>).reduce(
+            (sum, event) => sum + event.delta,
+            0,
+          );
 
     return {
       totalPoints,

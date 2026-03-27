@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { CITY_OPTIONS, type CityOption } from "@/app/constants/cities";
 import AuthAvatarMenu from "@/features/auth/presentation/components/auth-avatar-menu";
@@ -138,6 +139,7 @@ export default function LeafletMap({
   authTranslations,
   translations,
 }: LeafletMapProps) {
+  const router = useRouter();
   const { isDarkMode, toggleTheme } = useMapTheme();
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
@@ -208,7 +210,10 @@ export default function LeafletMap({
     existingZones: zones,
     translations,
     onZoneCreated: prependZone,
-    onSubmitSuccess: () => handleSetCreateMode(false),
+    onSubmitSuccess: () => {
+      handleSetCreateMode(false);
+      router.refresh();
+    },
   });
 
   const handleAcceptedTermsChange = useCallback(

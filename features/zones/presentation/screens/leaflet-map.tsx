@@ -286,6 +286,7 @@ export default function LeafletMap({
   const desktopAuthMenu = (
     <AuthAvatarMenu
       lang={lang}
+      initialPoints={initialUser.points ?? null}
       initialUser={initialUser}
       onSignedOut={() => handleSetCreateMode(false)}
       translations={authTranslations}
@@ -294,6 +295,7 @@ export default function LeafletMap({
   const mobileAuthMenu = (
     <AuthAvatarMenu
       lang={lang}
+      initialPoints={initialUser.points ?? null}
       initialUser={initialUser}
       onSignedOut={() => handleSetCreateMode(false)}
       translations={authTranslations}
@@ -330,13 +332,6 @@ export default function LeafletMap({
 
           <div className="flex items-center gap-2">
             <div className="md:hidden">{mobileAuthMenu}</div>
-            <button
-              type="button"
-              onClick={() => setIsFilterBarVisible((current) => !current)}
-              className="ghost-outline hidden rounded-[0.9rem] bg-surface-high px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-secondary transition-colors hover:bg-surface-bright md:inline-flex"
-            >
-              {translations.filterToggleTitle}
-            </button>
             {desktopCreateAction}
             <button
               type="button"

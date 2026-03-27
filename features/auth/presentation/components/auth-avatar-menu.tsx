@@ -14,6 +14,7 @@ import { signOutAction } from "@/features/auth/actions/auth-avatar-menu.actions"
 export type AuthMenuTranslations = {
   anonymousLabel: string;
   openMenu: string;
+  pointsLabel: string;
   signInWithGoogle: string;
   createZone: string;
   exitCreateZone: string;
@@ -22,6 +23,7 @@ export type AuthMenuTranslations = {
 
 type AuthAvatarMenuProps = {
   lang: string;
+  initialPoints: number | null;
   initialUser: AuthUserSnapshot;
   onSignedOut?: () => void;
   translations: AuthMenuTranslations;
@@ -29,6 +31,7 @@ type AuthAvatarMenuProps = {
 
 export default function AuthAvatarMenu({
   lang,
+  initialPoints,
   initialUser,
   onSignedOut,
   translations,
@@ -38,6 +41,7 @@ export default function AuthAvatarMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [currentUser, setCurrentUser] = useState(initialUser);
+  const [currentPoints, setCurrentPoints] = useState(initialPoints);
 
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const authProvider = useMemo(
@@ -84,6 +88,10 @@ export default function AuthAvatarMenu({
     setCurrentUser(initialUser);
   }, [initialUser]);
 
+  useEffect(() => {
+    setCurrentPoints(initialPoints);
+  }, [initialPoints]);
+
   async function handleGoogleSignIn() {
     setIsPending(true);
     try {
@@ -107,6 +115,7 @@ export default function AuthAvatarMenu({
         avatarUrl: null,
         isAnonymous: true,
       });
+      setCurrentPoints(null);
       onSignedOut?.();
       setIsOpen(false);
       router.refresh();
@@ -122,24 +131,33 @@ export default function AuthAvatarMenu({
 
   return (
     <div className="relative z-[1300]" ref={menuRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen((value) => !value)}
-        aria-label={translations.openMenu}
-        className="glass-panel ghost-outline flex h-11 w-11 items-center justify-center overflow-hidden rounded-full text-sm font-semibold text-foreground transition-colors hover:bg-surface-bright/70"
-      >
-        {currentUser.avatarUrl ? (
-          <Image
-            src={currentUser.avatarUrl}
-            alt={currentUser.displayName ?? "User avatar"}
-            width={40}
-            height={40}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span>{initials}</span>
-        )}
-      </button>
+      <div className="flex items-center gap-2">
+        {!currentUser.isAnonymous && currentPoints !== null ? (
+          <div className="ghost-outline inline-flex h-11 items-center rounded-full bg-surface-lowest/80 px-4 text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
+            <span className="text-foreground">{currentPoints}</span>
+            <span className="ml-2">{translations.pointsLabel}</span>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => setIsOpen((value) => !value)}
+          aria-label={translations.openMenu}
+          className="glass-panel ghost-outline flex h-11 w-11 items-center justify-center overflow-hidden rounded-full text-sm font-semibold text-foreground transition-colors hover:bg-surface-bright/70"
+        >
+          {currentUser.avatarUrl ? (
+            <Image
+              src={currentUser.avatarUrl}
+              alt={currentUser.displayName ?? "User avatar"}
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </button>
+      </div>
 
       {isOpen ? (
         <div className="glass-panel ghost-outline absolute right-0 z-[1400] mt-2 w-56 rounded-[1.1rem] p-2 text-sm text-foreground">

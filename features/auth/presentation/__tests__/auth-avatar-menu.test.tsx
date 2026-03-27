@@ -72,6 +72,7 @@ describe("AuthAvatarMenu", () => {
     render(
       <AuthAvatarMenu
         lang="en"
+        initialPoints={17}
         initialUser={initialUser}
         onSignedOut={onSignedOut}
         translations={translations}
@@ -88,5 +89,19 @@ describe("AuthAvatarMenu", () => {
     expect(onSignedOut).toHaveBeenCalledTimes(1);
     expect(refreshMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: translations.signOut })).toBeNull();
+  });
+
+  it("renders the current points to the left of the avatar for authenticated users", () => {
+    render(
+      <AuthAvatarMenu
+        lang="en"
+        initialPoints={17}
+        initialUser={initialUser}
+        translations={translations}
+      />,
+    );
+
+    expect(screen.getByText("17")).toBeInTheDocument();
+    expect(screen.getByText(translations.pointsLabel)).toBeInTheDocument();
   });
 });

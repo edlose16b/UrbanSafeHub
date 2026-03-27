@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/shared/providers/theme-provider";
 import type { ZoneDTO } from "@/lib/zones/application/zone-dto";
 import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { zoneGeometriesTouchOrIntersect } from "@/lib/zones/domain/geometry-overlap";

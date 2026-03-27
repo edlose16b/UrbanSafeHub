@@ -44,4 +44,5 @@ export type AuthUserSnapshot = {
   displayName: string | null;
   avatarUrl: string | null;
   isAnonymous: boolean;
+  points?: number | null;
 };

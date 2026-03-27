@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCurrentAuthUserSnapshot } from "@/lib/auth/server/get-current-auth-user";
+import { getUserContributionSummary } from "@/lib/reputation/server/get-user-contribution-summary";
 import MapScreen from "@/features/zones/presentation/screens/map-screen";
 import { hasLocale } from "../i18n/config";
 import { getDictionary } from "../i18n/get-dictionary";
@@ -18,7 +19,15 @@ export default async function HomePage({ params }: PageProps) {
   }
 
   const dictionary = await getDictionary(lang);
-  const initialUser = await getCurrentAuthUserSnapshot();
+  const viewer = await getCurrentAuthUserSnapshot();
+  const contributionSummary =
+    viewer.isAnonymous || viewer.id === null
+      ? null
+      : await getUserContributionSummary(viewer.id);
+  const initialUser = {
+    ...viewer,
+    points: contributionSummary?.totalPoints ?? null,
+  };
 
   return (
     <main className="w-screen h-screen overflow-hidden">

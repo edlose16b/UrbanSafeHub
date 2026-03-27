@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthUserSnapshot } from "@/lib/auth/server/get-current-auth-user";
 import { getUserContributionSummary } from "@/lib/reputation/server/get-user-contribution-summary";
 import MapScreen from "@/features/zones/presentation/screens/map-screen";
+import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
 import { buildZoneSlug, parseZoneSlug } from "@/lib/zones/application/zone-slug";
 import { getVisibleZoneDetail } from "@/lib/zones/server/get-visible-zone-detail";
 import { hasLocale } from "../../i18n/config";
@@ -30,9 +31,17 @@ function resolveZoneSlugParam(zoneSlug?: string[]): string | null {
 }
 
 async function loadZoneDetailFromSlug(
+  routeZoneSlug: string,
+  viewerUserId?: string | null,
+): Promise<ZoneDetailDTO>;
+async function loadZoneDetailFromSlug(
+  routeZoneSlug: null,
+  viewerUserId?: string | null,
+): Promise<null>;
+async function loadZoneDetailFromSlug(
   routeZoneSlug: string | null,
   viewerUserId?: string | null,
-) {
+): Promise<ZoneDetailDTO | null> {
   if (!routeZoneSlug) {
     return null;
   }
@@ -103,7 +112,9 @@ export default async function HomePage({ params }: PageProps) {
   const dictionaryPromise = getDictionary(lang);
   const viewerPromise = getCurrentAuthUserSnapshot();
   const viewer = await viewerPromise;
-  const initialSelectedZoneDetail = await loadZoneDetailFromSlug(routeZoneSlug, viewer.id);
+  const initialSelectedZoneDetail = routeZoneSlug
+    ? await loadZoneDetailFromSlug(routeZoneSlug, viewer.id)
+    : null;
   const canonicalSlug = initialSelectedZoneDetail
     ? buildZoneSlug(initialSelectedZoneDetail.zone)
     : null;

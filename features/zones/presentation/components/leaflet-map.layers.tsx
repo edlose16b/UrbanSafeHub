@@ -268,10 +268,9 @@ function PointZone({
         center={center}
         radius={4}
         pathOptions={{
-          color: "#ffffff",
+          stroke: false,
           fillColor: heatColor,
           fillOpacity: 0.95,
-          weight: isSelected ? 2.4 : 1.5,
         }}
       />
     </Fragment>

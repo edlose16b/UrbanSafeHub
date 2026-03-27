@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { Geist_Mono, Inter, Public_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import "leaflet/dist/leaflet.css";
+import { getPublicSiteUrl } from "@/lib/site/public-site-url";
 import ThemeProvider from "@/shared/providers/theme-provider";
 import "../globals.css";
-import { hasLocale, SUPPORTED_LOCALES } from "../i18n/config";
+import { hasLocale, SUPPORTED_LOCALES, type Locale } from "../i18n/config";
 import { getDictionary } from "../i18n/get-dictionary";
+import { buildMapMetadataImagePath, getOpenGraphLocale } from "./[[...zoneSlug]]/zone-share";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -47,10 +49,50 @@ export async function generateMetadata({
   }
 
   const dictionary = await getDictionary(lang);
+  const canonicalPath = `/${lang}`;
+  const localizedAlternates = Object.fromEntries(
+    SUPPORTED_LOCALES.map((locale) => [locale, `/${locale}`]),
+  ) as Record<Locale, string>;
+  const shareImagePath = buildMapMetadataImagePath(lang);
 
   return {
-    title: dictionary.metadata.title,
+    metadataBase: new URL(getPublicSiteUrl()),
+    title: {
+      default: dictionary.metadata.title,
+      template: `%s | ${dictionary.metadata.title}`,
+    },
     description: dictionary.metadata.description,
+    alternates: {
+      canonical: canonicalPath,
+      languages: localizedAlternates,
+    },
+    openGraph: {
+      title: dictionary.metadata.title,
+      description: dictionary.metadata.description,
+      url: canonicalPath,
+      siteName: dictionary.metadata.title,
+      locale: getOpenGraphLocale(lang),
+      type: "website",
+      images: [
+        {
+          url: shareImagePath,
+          width: 1200,
+          height: 630,
+          alt: dictionary.metadata.share.mapImageAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: dictionary.metadata.title,
+      description: dictionary.metadata.description,
+      images: [
+        {
+          url: shareImagePath,
+          alt: dictionary.metadata.share.mapImageAlt,
+        },
+      ],
+    },
   };
 }
 

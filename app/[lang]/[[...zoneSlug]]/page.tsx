@@ -3,67 +3,26 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthUserSnapshot } from "@/lib/auth/server/get-current-auth-user";
 import { getUserContributionSummary } from "@/lib/reputation/server/get-user-contribution-summary";
 import MapScreen from "@/features/zones/presentation/screens/map-screen";
-import type { ZoneDetailDTO } from "@/lib/zones/application/zone-detail-dto";
-import { buildZoneSlug, parseZoneSlug } from "@/lib/zones/application/zone-slug";
-import { getVisibleZoneDetail } from "@/lib/zones/server/get-visible-zone-detail";
 import { hasLocale } from "../../i18n/config";
 import { getDictionary } from "../../i18n/get-dictionary";
-
-type PageParams = {
-  lang: string;
-  zoneSlug?: string[];
-};
-
-type PageProps = {
-  params: Promise<PageParams>;
-};
-
-function resolveZoneSlugParam(zoneSlug?: string[]): string | null {
-  if (!zoneSlug || zoneSlug.length === 0) {
-    return null;
-  }
-
-  if (zoneSlug.length !== 1) {
-    notFound();
-  }
-
-  return zoneSlug[0] ?? null;
-}
-
-async function loadZoneDetailFromSlug(
-  routeZoneSlug: string,
-  viewerUserId?: string | null,
-): Promise<ZoneDetailDTO>;
-async function loadZoneDetailFromSlug(
-  routeZoneSlug: null,
-  viewerUserId?: string | null,
-): Promise<null>;
-async function loadZoneDetailFromSlug(
-  routeZoneSlug: string | null,
-  viewerUserId?: string | null,
-): Promise<ZoneDetailDTO | null> {
-  if (!routeZoneSlug) {
-    return null;
-  }
-
-  const parsedZoneSlug = parseZoneSlug(routeZoneSlug);
-
-  if (!parsedZoneSlug) {
-    notFound();
-  }
-
-  const detail = await getVisibleZoneDetail(parsedZoneSlug.zoneId, viewerUserId);
-
-  if (!detail) {
-    notFound();
-  }
-
-  return detail;
-}
+import {
+  buildMapMetadataImagePath,
+  buildMapImageAlt,
+  buildZoneImageAlt,
+  buildZoneMetadataDescription,
+  buildZoneMetadataImagePath,
+} from "./zone-share";
+import {
+  buildMapPath,
+  buildZonePath,
+  loadZoneDetailFromSlug,
+  resolveZoneSlugParam,
+  type ZonePageProps,
+} from "./zone-route";
 
 export async function generateMetadata({
   params,
-}: PageProps): Promise<Metadata> {
+}: ZonePageProps): Promise<Metadata> {
   const { lang, zoneSlug } = await params;
 
   if (!hasLocale(lang)) {
@@ -75,16 +34,29 @@ export async function generateMetadata({
 
   if (!routeZoneSlug) {
     return {
-      title: dictionary.metadata.title,
-      description: dictionary.metadata.description,
+      alternates: {
+        canonical: buildMapPath(lang),
+      },
+      openGraph: {
+        url: buildMapPath(lang),
+      },
+      twitter: {
+        images: [
+          {
+            url: buildMapMetadataImagePath(lang),
+            alt: buildMapImageAlt(dictionary),
+          },
+        ],
+      },
     };
   }
 
   const detail = await loadZoneDetailFromSlug(routeZoneSlug);
-  const canonicalSlug = buildZoneSlug(detail.zone);
-  const title = `${detail.zone.name} | ${dictionary.metadata.title}`;
-  const description = detail.zone.description ?? dictionary.metadata.description;
-  const canonicalPath = `/${lang}/${canonicalSlug}`;
+  const title = detail.zone.name;
+  const description = buildZoneMetadataDescription(detail, dictionary);
+  const canonicalPath = buildZonePath(lang, detail);
+  const ogImagePath = buildZoneMetadataImagePath(lang, detail);
+  const imageAlt = buildZoneImageAlt(detail, dictionary);
 
   return {
     title,
@@ -97,11 +69,30 @@ export async function generateMetadata({
       description,
       url: canonicalPath,
       type: "article",
+      images: [
+        {
+          url: ogImagePath,
+          width: 1200,
+          height: 630,
+          alt: imageAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [
+        {
+          url: ogImagePath,
+          alt: imageAlt,
+        },
+      ],
     },
   };
 }
 
-export default async function HomePage({ params }: PageProps) {
+export default async function HomePage({ params }: ZonePageProps) {
   const { lang, zoneSlug } = await params;
 
   if (!hasLocale(lang)) {
@@ -115,12 +106,12 @@ export default async function HomePage({ params }: PageProps) {
   const initialSelectedZoneDetail = routeZoneSlug
     ? await loadZoneDetailFromSlug(routeZoneSlug, viewer.id)
     : null;
-  const canonicalSlug = initialSelectedZoneDetail
-    ? buildZoneSlug(initialSelectedZoneDetail.zone)
+  const canonicalPath = initialSelectedZoneDetail
+    ? buildZonePath(lang, initialSelectedZoneDetail)
     : null;
 
-  if (routeZoneSlug && canonicalSlug && routeZoneSlug !== canonicalSlug) {
-    redirect(`/${lang}/${canonicalSlug}`);
+  if (routeZoneSlug && canonicalPath && canonicalPath !== `/${lang}/${routeZoneSlug}`) {
+    redirect(canonicalPath);
   }
 
   const [dictionary, contributionSummary] = await Promise.all([

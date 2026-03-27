@@ -1,7 +1,20 @@
 {
   "metadata": {
     "title": "UrbanSafeHub",
-    "description": "Community map to share and rate places"
+    "description": "Community map to share and rate places",
+    "share": {
+      "badge": "Community urban safety map",
+      "mapBadge": "Map overview",
+      "zoneBadge": "Community-reviewed zone",
+      "mapPreviewDescription": "Explore community-submitted zones, review safety signals, and share places with stronger context.",
+      "communitySignalLabel": "Community signal",
+      "communitySignalFallback": "Not enough signals yet",
+      "profileLabel": "Safety profile",
+      "profileFallback": "Not enough reports yet",
+      "zonePendingSignals": "Pending reports",
+      "mapImageAlt": "Social preview for the UrbanSafeHub community map",
+      "zoneImageAlt": "Social preview for the {zoneName} zone on UrbanSafeHub"
+    }
   },
   "map": {
     "projectName": "UrbanSafeHub",

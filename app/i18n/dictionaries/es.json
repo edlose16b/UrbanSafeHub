@@ -1,7 +1,20 @@
 {
   "metadata": {
     "title": "UrbanSafeHub",
-    "description": "Mapa comunitario para compartir y calificar lugares"
+    "description": "Mapa comunitario para compartir y calificar lugares",
+    "share": {
+      "badge": "Mapa comunitario de seguridad urbana",
+      "mapBadge": "Vista general del mapa",
+      "zoneBadge": "Zona verificada por la comunidad",
+      "mapPreviewDescription": "Explora zonas compartidas por la comunidad, revisa señales de seguridad y comparte ubicaciones con mejor contexto.",
+      "communitySignalLabel": "Señal comunitaria",
+      "communitySignalFallback": "Sin señales suficientes",
+      "profileLabel": "Perfil de seguridad",
+      "profileFallback": "Aún no hay suficientes reportes",
+      "zonePendingSignals": "Reportes pendientes",
+      "mapImageAlt": "Vista previa social del mapa comunitario UrbanSafeHub",
+      "zoneImageAlt": "Vista previa social de la zona {zoneName} en UrbanSafeHub"
+    }
   },
   "map": {
     "projectName": "UrbanSafeHub",

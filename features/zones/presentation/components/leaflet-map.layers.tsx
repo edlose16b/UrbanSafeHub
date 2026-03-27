@@ -219,6 +219,13 @@ function PointZone({
   const isSelected = zone.id === selectedZoneId;
   const severity = getZoneSeverity(zone.crimeLevel);
   const midFillOpacity = severity === "danger" ? 0.28 : severity === "moderate" ? 0.22 : 0.18;
+  const zoneSelectHandlers = onZoneSelect
+    ? {
+        click() {
+          onZoneSelect(zone.id);
+        },
+      }
+    : undefined;
 
   return (
     <Fragment key={zone.id}>
@@ -237,15 +244,7 @@ function PointZone({
         key={`${zone.id}-mid`}
         center={center}
         radius={radiusM}
-        eventHandlers={
-          onZoneSelect
-            ? {
-                click() {
-                  onZoneSelect(zone.id);
-                },
-              }
-            : undefined
-        }
+        eventHandlers={zoneSelectHandlers}
         pathOptions={{
           color: isSelected ? "#e5e2e1" : heatColor,
           stroke: isSelected,
@@ -262,7 +261,7 @@ function PointZone({
         key={`${zone.id}-core`}
         center={center}
         radius={coreRadiusM}
-        interactive={false}
+        eventHandlers={zoneSelectHandlers}
         pathOptions={{
           stroke: false,
           fillColor: heatColor,
@@ -273,6 +272,7 @@ function PointZone({
         key={`${zone.id}-hotspot`}
         center={center}
         radius={4}
+        eventHandlers={zoneSelectHandlers}
         pathOptions={{
           stroke: false,
           fillColor: heatColor,

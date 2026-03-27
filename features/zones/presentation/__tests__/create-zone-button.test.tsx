@@ -65,7 +65,7 @@ describe("CreateZoneButton", () => {
     });
   });
 
-  it("uses the configured public site URL for OAuth redirects", async () => {
+  it("prefers the configured public site URL over the current browser origin", async () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://urbansafehub.app/");
     executeMock.mockResolvedValueOnce();
 

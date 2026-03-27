@@ -11,8 +11,10 @@ export const POINT_RADIUS_OPTIONS_M = [50,100, 150, 200, 250, 300] as const;
 export const DEFAULT_POINT_RADIUS_M = 150;
 
 export const MAP_TILE_STYLES = {
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  dark: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
+  darkLabels:
+    "https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png",
 } as const;
 
 export const TILE_ATTRIBUTION =

@@ -207,4 +207,8 @@ body {
   .leaflet-interactive:focus {
     outline: none;
   }
+
+  .map-dark-labels-pane .leaflet-tile {
+    opacity: 0.95;
+  }
 }

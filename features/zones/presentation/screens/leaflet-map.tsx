@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { CITY_OPTIONS, type CityOption } from "@/app/constants/cities";
 import AuthAvatarMenu from "@/features/auth/presentation/components/auth-avatar-menu";
-import { MapContainer, TileLayer } from "react-leaflet";
+import { MapContainer, Pane, TileLayer } from "react-leaflet";
 import {
   INITIAL_ZOOM,
   LIMA_CENTER,
@@ -216,6 +216,7 @@ export default function LeafletMap({
   );
 
   const tileUrl = isDarkMode ? MAP_TILE_STYLES.dark : MAP_TILE_STYLES.light;
+  const darkLabelTileUrl = MAP_TILE_STYLES.darkLabels;
   const toggleIcon = isDarkMode ? MAP_STYLE_ICON.dark : MAP_STYLE_ICON.light;
   const iconClassName = isDarkMode ? "brightness-0 invert" : "";
   const themeAriaLabel = isDarkMode
@@ -440,7 +441,18 @@ export default function LeafletMap({
         />
         <FocusMapTarget target={focusTarget} />
         {userPosition ? <RecenterOnUserPosition position={userPosition} /> : null}
-        <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
+        <Pane
+          name="map-base"
+          style={{ zIndex: 200 }}
+          className={isDarkMode ? "map-dark-base-pane" : undefined}
+        >
+          <TileLayer attribution={TILE_ATTRIBUTION} url={tileUrl} />
+        </Pane>
+        {isDarkMode ? (
+          <Pane name="map-labels" style={{ zIndex: 350 }} className="map-dark-labels-pane">
+            <TileLayer url={darkLabelTileUrl} pane="map-labels" />
+          </Pane>
+        ) : null}
         <ZoneLayer
           zones={filteredZones}
           translations={translations}

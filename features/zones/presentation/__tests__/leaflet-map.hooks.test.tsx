@@ -13,6 +13,34 @@ function createZonesResponse() {
   });
 }
 
+function createZonesPayloadResponse(zoneId: string) {
+  return new Response(
+    JSON.stringify({
+      zones: [
+        {
+          id: zoneId,
+          name: "Zone",
+          description: null,
+          geometry: {
+            type: "Point",
+            coordinates: [-77.0428, -12.0464],
+            radiusM: 150,
+          },
+          crimeLevel: 3,
+          createdBy: "user-1",
+          createdAt: "2026-03-20T10:00:00.000Z",
+        },
+      ],
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+}
+
 function createZoneDetailResponse(detail: ZoneDetailDTO) {
   return new Response(JSON.stringify({ detail }), {
     status: 200,
@@ -203,6 +231,38 @@ describe("useZonesByViewport", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(0);
+  });
+
+  it("can remove a zone locally and refresh the last fetched viewport", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createZonesPayloadResponse("zone-1"))
+      .mockResolvedValueOnce(createZonesResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useZonesByViewport());
+
+    act(() => {
+      result.current.scheduleZoneFetch(baseViewport);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+      await Promise.resolve();
+    });
+
+    expect(result.current.zones).toHaveLength(1);
+
+    act(() => {
+      result.current.removeZoneById("zone-1");
+    });
+
+    expect(result.current.zones).toHaveLength(0);
+
+    await act(async () => {
+      await result.current.refreshZones();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
 });

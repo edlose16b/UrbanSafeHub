@@ -1,10 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
+  CreateZoneReportRecord,
+  CreateZoneReportResult,
   ListVisibleNearCenterQuery,
   SubmitZoneRatingsRecord,
   ZoneCommandRepository,
   ZoneQueryRepository,
 } from "../domain/ports";
+import { DuplicateZoneReportError } from "../application/report-zone";
 import type {
   TimeSegment,
   ZoneCommentSnapshot,
@@ -59,6 +62,10 @@ type ZoneViewerRatingRow = {
   category_slug: string;
   time_segment: TimeSegment | null;
   score: number;
+};
+
+type ZoneVisibilityRow = {
+  visibility: "active" | "hidden";
 };
 
 function isPosition(value: unknown): value is GeoJsonPosition {
@@ -566,5 +573,40 @@ export class SupabaseZoneRepository
     if (error) {
       throw new Error(`Unable to submit zone ratings: ${error.message}`);
     }
+  }
+
+  async reportZone(
+    record: CreateZoneReportRecord,
+  ): Promise<CreateZoneReportResult> {
+    const { error } = await this.supabase.from("moderation_reports").insert({
+      target_type: "zone",
+      target_id: record.zoneId,
+      reporter_user_id: record.reporterUserId,
+      reason: record.reason,
+      details: record.details,
+      status: "open",
+    });
+
+    if (error) {
+      if (error.code === "23505") {
+        throw new DuplicateZoneReportError("You already reported this zone.");
+      }
+
+      throw new Error(`Unable to report zone: ${error.message}`);
+    }
+
+    const { data: zoneData, error: zoneError } = await this.supabase
+      .from("zones")
+      .select("visibility")
+      .eq("id", record.zoneId)
+      .maybeSingle();
+
+    if (zoneError) {
+      throw new Error(`Unable to verify zone visibility: ${zoneError.message}`);
+    }
+
+    return {
+      zoneHidden: (zoneData as ZoneVisibilityRow | null)?.visibility === "hidden",
+    };
   }
 }

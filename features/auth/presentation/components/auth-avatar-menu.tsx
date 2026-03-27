@@ -7,6 +7,7 @@ import { GetCurrentUserUseCase } from "@/lib/auth/application/get-current-user";
 import { SignInWithGoogleUseCase } from "@/lib/auth/application/sign-in-with-google";
 import type { AuthUserSnapshot } from "@/lib/auth/domain/auth-user";
 import { SupabaseAuthProviderGateway } from "@/lib/auth/infrastructure/supabase-auth-provider-gateway";
+import { getAuthRedirectBaseUrl } from "@/lib/auth/presentation/get-auth-redirect-base-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { signOutAction } from "@/features/auth/actions/auth-avatar-menu.actions";
 
@@ -86,7 +87,8 @@ export default function AuthAvatarMenu({
   async function handleGoogleSignIn() {
     setIsPending(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?next=/${lang}`;
+      const redirectBaseUrl = getAuthRedirectBaseUrl(window.location.origin);
+      const redirectTo = `${redirectBaseUrl}/auth/callback?next=/${lang}`;
       await signInWithGoogleUseCase.execute(redirectTo);
     } finally {
       setIsPending(false);

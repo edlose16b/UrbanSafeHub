@@ -138,9 +138,26 @@ export function useZonesByViewport() {
     ]);
   }, []);
 
+  const removeZoneById = useCallback((zoneId: string) => {
+    setZones((current) => current.filter((zone) => zone.id !== zoneId));
+  }, []);
+
+  const refreshZones = useCallback(async () => {
+    const lastViewport = lastFetchedViewportRef.current;
+
+    if (!lastViewport) {
+      return;
+    }
+
+    cancelScheduledZoneFetch();
+    await fetchZones(lastViewport);
+  }, [cancelScheduledZoneFetch, fetchZones]);
+
   return {
     zones,
     prependZone,
+    removeZoneById,
+    refreshZones,
     scheduleZoneFetch,
     cancelScheduledZoneFetch,
   };

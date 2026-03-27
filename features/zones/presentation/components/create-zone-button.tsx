@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { SignInWithGoogleUseCase } from "@/lib/auth/application/sign-in-with-google";
 import type { AuthMenuTranslations } from "@/features/auth/presentation/components/auth-avatar-menu";
 import { SupabaseAuthProviderGateway } from "@/lib/auth/infrastructure/supabase-auth-provider-gateway";
+import { getAuthRedirectBaseUrl } from "@/lib/auth/presentation/get-auth-redirect-base-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CreateZoneButtonProps = {
@@ -47,7 +48,8 @@ export function CreateZoneButton({
     setIsPending(true);
 
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?next=/${lang}`;
+      const redirectBaseUrl = getAuthRedirectBaseUrl(window.location.origin);
+      const redirectTo = `${redirectBaseUrl}/auth/callback?next=/${lang}`;
       await signInWithGoogleUseCase.execute(redirectTo);
     } finally {
       setIsPending(false);

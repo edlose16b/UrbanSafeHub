@@ -27,8 +27,6 @@ import {
 } from "./zone-rating-ui";
 import {
   buildZoneCreationRatingsPayload,
-  createEmptyInfrastructureScores,
-  createEmptyMetricScores,
   summarizeMetricScores,
   type MetricScoresSummary,
   type NullableZoneRatingScore,
@@ -36,6 +34,7 @@ import {
   type ZoneCreationMetricScores,
   type ZoneRatingScore,
 } from "../utils/zone-creation-form.utils";
+import type { ZoneReportReason } from "@/lib/zones/domain/ports";
 
 const RATING_CATEGORY_ORDER = [
   "crime",
@@ -182,10 +181,6 @@ function resolveGeneralAggregate(
     aggregateByCell.get(`${categorySlug}:general`) ??
     getDerivedGeneralAggregate(categorySlug, aggregateByCell)
   );
-}
-
-function categoryUsesSegments(categorySlug: string): boolean {
-  return categorySlug === "crime" || categorySlug === "foot_traffic" || categorySlug === "vigilance";
 }
 
 function SegmentStat({
@@ -412,6 +407,36 @@ function getProfileLabel(detail: ZoneDetailDTO, translations: MapTranslations): 
 }
 
 const SCORE_OPTIONS: readonly ZoneRatingScore[] = [1, 2, 3, 4, 5] as const;
+const ZONE_REPORT_REASON_OPTIONS: readonly {
+  value: ZoneReportReason;
+  labelKey:
+    | "zoneDetailReportReasonDuplicateOrSpam"
+    | "zoneDetailReportReasonFalseOrInaccurateInfo"
+    | "zoneDetailReportReasonOffensiveOrHarmfulContent"
+    | "zoneDetailReportReasonWrongLocation"
+    | "zoneDetailReportReasonOther";
+}[] = [
+  {
+    value: "duplicate_or_spam",
+    labelKey: "zoneDetailReportReasonDuplicateOrSpam",
+  },
+  {
+    value: "false_or_inaccurate_info",
+    labelKey: "zoneDetailReportReasonFalseOrInaccurateInfo",
+  },
+  {
+    value: "offensive_or_harmful_content",
+    labelKey: "zoneDetailReportReasonOffensiveOrHarmfulContent",
+  },
+  {
+    value: "wrong_location",
+    labelKey: "zoneDetailReportReasonWrongLocation",
+  },
+  {
+    value: "other",
+    labelKey: "zoneDetailReportReasonOther",
+  },
+] as const;
 const CCTV_OPTIONS: readonly {
   labelKey:
   | "zoneCreateInfrastructureCctvNone"
@@ -975,6 +1000,195 @@ function ZoneVotePanel({
   );
 }
 
+function ZoneReportPanel({
+  zoneId,
+  isAuthenticated,
+  onZoneHidden,
+  translations,
+}: {
+  zoneId: string;
+  isAuthenticated: boolean;
+  onZoneHidden: (zoneId: string) => void;
+  translations: MapTranslations;
+}) {
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [reason, setReason] = useState<ZoneReportReason | "">("");
+  const [details, setDetails] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
+  const requiresDetails = reason === "other";
+
+  async function handleSubmit() {
+    if (!isAuthenticated) {
+      setSubmitError(translations.zoneDetailReportLoginRequired);
+      setSubmitSuccess(null);
+      return;
+    }
+
+    if (!reason) {
+      setSubmitError(translations.zoneDetailReportReasonPlaceholder);
+      setSubmitSuccess(null);
+      return;
+    }
+
+    const normalizedDetails = details.trim();
+
+    if (requiresDetails && !normalizedDetails) {
+      setSubmitError(translations.zoneDetailReportDetailsRequired);
+      setSubmitSuccess(null);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+
+    try {
+      const response = await fetch(`/api/zones/${zoneId}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reason,
+          details: normalizedDetails || undefined,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        zoneHidden?: boolean;
+      };
+
+      if (!response.ok) {
+        const message =
+          response.status === 409
+            ? translations.zoneDetailReportDuplicate
+            : payload.error ?? translations.zoneDetailReportErrorFallback;
+        throw new Error(message);
+      }
+
+      if (payload.zoneHidden) {
+        setSubmitSuccess(translations.zoneDetailReportZoneHidden);
+        onZoneHidden(zoneId);
+        return;
+      }
+
+      setSubmitSuccess(translations.zoneDetailReportSuccess);
+      setReason("");
+      setDetails("");
+      setIsComposerOpen(false);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : translations.zoneDetailReportErrorFallback,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="rounded-[1.25rem] bg-surface-muted px-3.5 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+            {translations.zoneDetailReportTitle}
+          </h3>
+          <p className="mt-2 text-sm text-text-secondary">
+            {isAuthenticated
+              ? translations.zoneDetailReportSubtitleAuthenticated
+              : translations.zoneDetailReportSubtitleAnonymous}
+          </p>
+        </div>
+      </div>
+
+      {!isAuthenticated ? (
+        <p className="mt-4 rounded-[1rem] bg-surface-low px-3 py-3 text-sm text-text-secondary ghost-outline">
+          {translations.zoneDetailReportLoginRequired}
+        </p>
+      ) : null}
+
+      {isAuthenticated && !isComposerOpen ? (
+        <button
+          type="button"
+          onClick={() => setIsComposerOpen(true)}
+          className="mt-4 w-full rounded-[1rem] bg-surface-low px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-high ghost-outline"
+        >
+          {translations.zoneDetailReportOpen}
+        </button>
+      ) : null}
+
+      {isAuthenticated && isComposerOpen ? (
+        <div className="mt-4 space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+              {translations.zoneDetailReportReasonLabel}
+            </span>
+            <select
+              value={reason}
+              onChange={(event) => {
+                setReason(event.target.value as ZoneReportReason | "");
+                setSubmitError(null);
+                setSubmitSuccess(null);
+              }}
+              className="w-full rounded-[1rem] bg-surface-low px-3 py-3 text-sm text-foreground outline-none ghost-outline"
+            >
+              <option value="">{translations.zoneDetailReportReasonPlaceholder}</option>
+              {ZONE_REPORT_REASON_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {translations[option.labelKey]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {requiresDetails ? (
+            <label className="block">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+                {translations.zoneDetailReportDetailsLabel}
+              </span>
+              <textarea
+                value={details}
+                onChange={(event) => {
+                  setDetails(event.target.value);
+                  setSubmitError(null);
+                  setSubmitSuccess(null);
+                }}
+                rows={4}
+                maxLength={500}
+                placeholder={translations.zoneDetailReportDetailsPlaceholder}
+                className="w-full rounded-[1rem] bg-surface-low px-3 py-3 text-sm text-foreground outline-none ghost-outline"
+              />
+            </label>
+          ) : null}
+
+          {submitError ? (
+            <p className="text-sm text-danger-foreground">{submitError}</p>
+          ) : null}
+          {submitSuccess ? (
+            <p className="text-sm text-tertiary">{submitSuccess}</p>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full rounded-[1rem] px-4 py-3 text-sm font-semibold text-primary-foreground primary-glow disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSubmitting
+              ? translations.zoneDetailReportSubmitting
+              : translations.zoneDetailReportSubmit}
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export type ZoneDetailCardProps = {
   lang: string;
   detail: ZoneDetailDTO | null;
@@ -983,6 +1197,7 @@ export type ZoneDetailCardProps = {
   isAuthenticated: boolean;
   onClose: () => void;
   onRefreshDetail: () => Promise<ZoneDetailDTO | null>;
+  onZoneHidden: (zoneId: string) => void;
   translations: MapTranslations;
 };
 
@@ -994,6 +1209,7 @@ export function ZoneDetailCard({
   isAuthenticated,
   onClose,
   onRefreshDetail,
+  onZoneHidden,
   translations,
 }: ZoneDetailCardProps) {
   if (!isLoading && !error && !detail) {
@@ -1012,13 +1228,6 @@ export function ZoneDetailCard({
     const streetViewUrl = GOOGLE_STREET_VIEW_API_KEY
       ? getZoneStreetViewUrl(geometry, GOOGLE_STREET_VIEW_API_KEY)
       : null;
-    const geometryTypeLabel =
-      geometry.type === "Point"
-        ? translations.zoneDetailTypePoint
-        : translations.zoneDetailTypePolygon;
-    const vertexCount =
-      geometry.type === "Polygon" ? Math.max(0, geometry.coordinates[0].length - 1) : 0;
-    const createdAtLabel = formatDateLabel(detail.zone.createdAt, locale);
     const statusLabel = getStatusLabel(detail, translations);
     const statusSummary = getStatusSummary(detail, translations);
     const profileLabel = getProfileLabel(detail, translations);
@@ -1149,6 +1358,13 @@ export function ZoneDetailCard({
           detail={detail}
           isAuthenticated={isAuthenticated}
           onRefreshDetail={onRefreshDetail}
+          translations={translations}
+        />
+
+        <ZoneReportPanel
+          zoneId={detail.zone.id}
+          isAuthenticated={isAuthenticated}
+          onZoneHidden={onZoneHidden}
           translations={translations}
         />
 

@@ -143,13 +143,19 @@ export default function LeafletMap({
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ZoneFilterKey>("all");
   const [isFilterBarVisible, setIsFilterBarVisible] = useState(false);
-  const [isLegendVisible, setIsLegendVisible] = useState(true);
   const [activeCity, setActiveCity] = useState<CityOption>(CITY_OPTIONS[0]);
   const [focusTarget, setFocusTarget] = useState<{
     position: [number, number];
     zoom?: number;
   } | null>(null);
-  const { zones, prependZone, scheduleZoneFetch, cancelScheduledZoneFetch } =
+  const {
+    zones,
+    prependZone,
+    removeZoneById,
+    refreshZones,
+    scheduleZoneFetch,
+    cancelScheduledZoneFetch,
+  } =
     useZonesByViewport();
   const {
     selectedZoneDetail,
@@ -233,6 +239,15 @@ export default function LeafletMap({
     [activeFilter, zones],
   );
   const selectedZoneId = selectedZoneDetail?.zone.id ?? null;
+
+  const handleZoneHidden = useCallback(
+    (zoneId: string) => {
+      removeZoneById(zoneId);
+      clearSelectedZone();
+      void refreshZones();
+    },
+    [clearSelectedZone, refreshZones, removeZoneById],
+  );
 
   const handleZoneSelect = useCallback(
     (zoneId: string) => {
@@ -411,7 +426,7 @@ export default function LeafletMap({
       <CrimeLegend
         title={translations.crimeLegendTitle}
         translations={translations}
-        isVisible={isLegendVisible}
+        isVisible
       />
       <ZoneDetailCard
         lang={lang}
@@ -421,6 +436,7 @@ export default function LeafletMap({
         isAuthenticated={isAuthenticated}
         onClose={clearSelectedZone}
         onRefreshDetail={refreshSelectedZone}
+        onZoneHidden={handleZoneHidden}
         translations={translations}
       />
 

@@ -21,6 +21,7 @@ describe("CreateZoneButton", () => {
   afterEach(() => {
     cleanup();
     executeMock.mockReset();
+    vi.unstubAllEnvs();
   });
 
   it("toggles create mode when the user is authenticated", () => {
@@ -60,6 +61,29 @@ describe("CreateZoneButton", () => {
     await waitFor(() => {
       expect(executeMock).toHaveBeenCalledWith(
         "http://localhost:3000/auth/callback?next=/es",
+      );
+    });
+  });
+
+  it("uses the configured public site URL for OAuth redirects", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://urbansafehub.app/");
+    executeMock.mockResolvedValueOnce();
+
+    render(
+      <CreateZoneButton
+        lang="es"
+        isAuthenticated={false}
+        isCreateMode={false}
+        onSetCreateMode={vi.fn()}
+        translations={translations}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: translations.createZone }));
+
+    await waitFor(() => {
+      expect(executeMock).toHaveBeenCalledWith(
+        "https://urbansafehub.app/auth/callback?next=/es",
       );
     });
   });

@@ -66,6 +66,7 @@ describe("ZoneDetailCard", () => {
         isAuthenticated={false}
         onClose={() => {}}
         onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
         translations={translations}
       />,
     );
@@ -73,7 +74,7 @@ describe("ZoneDetailCard", () => {
     expect(screen.getByText("Near the main avenue and bus stop.")).toBeTruthy();
     expect(screen.getByText("Safe hub")).toBeTruthy();
     expect(screen.getByText("Infrastructure")).toBeTruthy();
-    expect(screen.getByText("Zone data")).toBeTruthy();
+    expect(screen.getByText("Report this zone")).toBeTruthy();
     expect(screen.getAllByText("☀️").length).toBeGreaterThan(0);
     expect(screen.getAllByText("🌙").length).toBeGreaterThan(0);
     expect(screen.getAllByText("★").length).toBeGreaterThan(3);
@@ -96,6 +97,7 @@ describe("ZoneDetailCard", () => {
         isAuthenticated={false}
         onClose={() => {}}
         onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
         translations={translations}
       />,
     );
@@ -118,6 +120,7 @@ describe("ZoneDetailCard", () => {
         isAuthenticated={false}
         onClose={() => {}}
         onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
         translations={translations}
       />,
     );
@@ -125,7 +128,7 @@ describe("ZoneDetailCard", () => {
     expect(screen.getByLabelText("3.5/5")).toBeTruthy();
   });
 
-  it("keeps comments and metadata visible as lower-priority sections", () => {
+  it("keeps comments and moderation actions visible as lower-priority sections", () => {
     render(
       <ZoneDetailCard
         lang="en"
@@ -135,13 +138,14 @@ describe("ZoneDetailCard", () => {
         isAuthenticated={false}
         onClose={() => {}}
         onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
         translations={translations}
       />,
     );
 
     expect(screen.getAllByText("Recent comments").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("user-1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Point").length).toBeGreaterThan(0);
+    expect(screen.getByText("Good lighting near the station entrance.")).toBeTruthy();
+    expect(screen.getByText("Report this zone")).toBeTruthy();
   });
 
   it("prefills the authenticated vote state for the active segment", () => {
@@ -160,6 +164,7 @@ describe("ZoneDetailCard", () => {
         isAuthenticated
         onClose={() => {}}
         onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
         translations={translations}
       />,
     );
@@ -185,6 +190,7 @@ describe("ZoneDetailCard", () => {
         isAuthenticated={false}
         onClose={() => {}}
         onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
         translations={translations}
       />,
     );
@@ -212,6 +218,7 @@ describe("ZoneDetailCard", () => {
         isAuthenticated={false}
         onClose={() => {}}
         onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
         translations={translations}
       />,
     );
@@ -219,5 +226,45 @@ describe("ZoneDetailCard", () => {
     expect(screen.getAllByRole("button", { name: "Rate zone" }).length).toBeGreaterThan(0);
     expect(screen.queryByText("Time segment")).toBeNull();
     expect(screen.queryByRole("button", { name: "Submit rating" })).toBeNull();
+  });
+
+  it("shows a sign-in requirement for anonymous users in the report panel", () => {
+    render(
+      <ZoneDetailCard
+        lang="en"
+        detail={createDetail()}
+        isLoading={false}
+        error={null}
+        isAuthenticated={false}
+        onClose={() => {}}
+        onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
+        translations={translations}
+      />,
+    );
+
+    expect(screen.getByText("Sign in to report this zone.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Report zone" })).toBeNull();
+  });
+
+  it("opens the report composer for authenticated users", () => {
+    render(
+      <ZoneDetailCard
+        lang="en"
+        detail={createDetail()}
+        isLoading={false}
+        error={null}
+        isAuthenticated
+        onClose={() => {}}
+        onRefreshDetail={async () => null}
+        onZoneHidden={() => {}}
+        translations={translations}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Report zone" }));
+
+    expect(screen.getByText("Reason")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send report" })).toBeTruthy();
   });
 });
